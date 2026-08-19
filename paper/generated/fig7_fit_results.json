@@ -1,0 +1,112 @@
+{
+  "bootstrap_samples_requested": 10000,
+  "frequency_difference_knitted_minus_no_knit": {
+    "interval_68": [
+      -1.3503293388851672,
+      -0.14580475833175846
+    ],
+    "interval_95": [
+      -2.369971659158132,
+      0.42540610141597945
+    ],
+    "median": -0.6869895462492932,
+    "probability_positive": 0.1008
+  },
+  "primary_model": "truncated",
+  "primary_rule": "Use damped only if its AICc is at least 6 lower for both series and its bootstrap failure and boundary fractions are each <= 5%; otherwise use truncated.",
+  "random_seed": 20260819,
+  "series": {
+    "knitted": {
+      "damped": {
+        "aicc": 30.945607935848354,
+        "bootstrap_boundary_fraction": 0.7001,
+        "bootstrap_failures": 0,
+        "bootstrap_successes": 10000,
+        "chi2": 0.9456079358483536,
+        "chi2_per_dof": 0.2364019839620884,
+        "dof": 4,
+        "frequency_interval_68": [
+          4.817029604403313,
+          6.289721896453641
+        ],
+        "frequency_median": 5.5668340340557965,
+        "model": "damped",
+        "p_value": 0.9179283671304078,
+        "parameters": {
+          "amplitude": 0.007095142989771555,
+          "damping": 2.364444082194545e-22,
+          "frequency": 5.502555988561915,
+          "offset": 0.4893239721195161,
+          "slope": 0.033767972982719406
+        }
+      },
+      "truncated": {
+        "aicc": 12.844129736777596,
+        "bootstrap_boundary_fraction": 0.0491,
+        "bootstrap_failures": 0,
+        "bootstrap_successes": 10000,
+        "chi2": 2.0441297367775975,
+        "chi2_per_dof": 0.3406882894629329,
+        "dof": 6,
+        "frequency_interval_68": [
+          1.3021153744872762,
+          2.2531930501427277
+        ],
+        "frequency_median": 1.9023675813616745,
+        "model": "truncated",
+        "p_value": 0.9155955520064225,
+        "parameters": {
+          "amplitude": -0.022541944300491373,
+          "frequency": 1.8978226461484327,
+          "offset": 0.5176327472395034
+        }
+      }
+    },
+    "no_knit": {
+      "damped": {
+        "aicc": 32.51455266132552,
+        "bootstrap_boundary_fraction": 0.8911,
+        "bootstrap_failures": 0,
+        "bootstrap_successes": 10000,
+        "chi2": 2.514552661325518,
+        "chi2_per_dof": 0.6286381653313795,
+        "dof": 4,
+        "frequency_interval_68": [
+          0.5051386613999702,
+          2.1809564582913885
+        ],
+        "frequency_median": 0.8517146530595767,
+        "model": "damped",
+        "p_value": 0.6420318232499258,
+        "parameters": {
+          "amplitude": -0.5027540267370315,
+          "damping": 0.49824485944365976,
+          "frequency": 0.7329433890263263,
+          "offset": 0.9999999999998653,
+          "slope": -0.23594439227809189
+        }
+      },
+      "truncated": {
+        "aicc": 13.499514660010632,
+        "bootstrap_boundary_fraction": 0.0018,
+        "bootstrap_failures": 0,
+        "bootstrap_successes": 10000,
+        "chi2": 2.699514660010632,
+        "chi2_per_dof": 0.44991911000177204,
+        "dof": 6,
+        "frequency_interval_68": [
+          2.192930268768564,
+          2.8834450205267883
+        ],
+        "frequency_median": 2.5653503687933013,
+        "model": "truncated",
+        "p_value": 0.8455046232668989,
+        "parameters": {
+          "amplitude": -0.02147891682827887,
+          "frequency": 2.567020241429884,
+          "offset": 0.5207395897377527
+        }
+      }
+    }
+  }
+}

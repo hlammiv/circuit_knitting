@@ -1,0 +1,15 @@
+\documentclass[varwidth=true, border={1pt 0pt 12pt 0pt}]{standalone}
+ \usepackage{latexsym,amsmath,amssymb,amsthm,lmodern,float,url}
+\usepackage{tikz}
+\usetikzlibrary{quantikz2}
+
+\begin{document}
+\begin{equation}
+    \mathcal{U}_1=
+\begin{quantikz}[row sep=0.5em, column sep=0.55em]
+\lstick{$|p_n\rangle$} & \qw & \gate{R_Z(m\varepsilon)} & \qw \\
+\lstick{$|\sigma_{n,n+1}\rangle$} & \qw & \gate{R_X(\varepsilon)} & \qw \\
+\lstick{$|e_{n+1}\rangle$} & \qw & \gate{R_Z(-m\varepsilon)} & \qw
+\end{quantikz}\notag
+\end{equation}
+\end{document}
