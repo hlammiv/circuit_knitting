@@ -158,3 +158,16 @@ def load_experiment_results(filename: str, config: ExperimentConfig) -> Dict[str
     
     with open(full_path, 'rb') as file:
         return pickle.load(file)
+
+# The original modular copy above used an incomplete three-term decomposition.
+# Keep these import paths working, but make the tested six-term engine canonical.
+try:
+    from ..experiment import (
+        circuit_knitter, load_experiment_results, save_experiment_results,
+    )
+except ImportError:
+    from experiment import (
+        circuit_knitter, load_experiment_results, save_experiment_results,
+    )
+
+__all__ = ["circuit_knitter", "load_experiment_results", "save_experiment_results"]

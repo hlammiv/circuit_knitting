@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editors and OS
+*.swp
+*~
+.DS_Store
+
+# LaTeX build products (sources, bibliography, and final figures remain tracked)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+paper/*.toc
+paper/*.tdo
+paper/main.pdf
+.cache/
+checkpoints/
+paper/*Notes.bib
+
+# Local test/build output
+build/
+dist/
