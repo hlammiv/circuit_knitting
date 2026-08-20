@@ -1,7 +1,14 @@
 """
 Experiment execution and management functions.
 """
+import hashlib
+import json
+import importlib.metadata
+import os
 import pickle
+import time
+from pathlib import Path
+
 import numpy as np
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
@@ -15,10 +22,15 @@ from collections import defaultdict
 
 try:
     from .config import ExperimentConfig
-    from .circuit_utils import prepare_circuit_for_execution
 except ImportError:
     from config import ExperimentConfig
-    from circuit_utils import prepare_circuit_for_execution
+
+
+def _make_backend(noise: bool):
+    """Create a local simulator, using Washington calibration data when noisy."""
+    if not noise:
+        return AerSimulator()
+    return AerSimulator.from_backend(FakeWashingtonV2())
 
 
 def run_circuit_experiment(
@@ -40,7 +52,7 @@ def run_circuit_experiment(
         Dictionary of measurement counts
     """
     # Set up backend based on noise configuration
-    backend = FakeWashingtonV2() if config.noise else AerSimulator()
+    backend = _make_backend(config.noise)
     
     # Set up transpiler
     pass_manager = generate_preset_pass_manager(
@@ -150,10 +162,7 @@ def my_measure(circuit_data: List, conq: int, tarq: int, num_qubits: int, num_cx
     my_circ.measure([*range(num_qubits)], [*range(-num_qubits, 0)])
 
     # select noisy or ideal backend
-    if noise:
-        backend = FakeWashingtonV2()
-    else:
-        backend = AerSimulator()
+    backend = _make_backend(noise)
     
     # transpiled circuit 
     pass_manager = generate_preset_pass_manager(optimization_level=1, backend=backend, seed_transpiler=transpiler_seed)
@@ -268,35 +277,146 @@ def circuit_knitter(
     circuits = [*product(*nest_list)]
     circuits = [flattener(item) for item in circuits]
     
-    # Execute all knitting terms and combine results
-    cum_tot = defaultdict(int)
-    for i, item in enumerate(circuits):
-        # Use provided seeds for reproducibility, or generate random seeds for variability
-        if simulator_seed is not None:
-            current_simulator_seed = simulator_seed + i  # Add iteration to ensure different seeds for each circuit
+    if len(circuits) != 6**num_cx or len(circuits) != len(prefac_list):
+        raise RuntimeError("Incomplete six-term circuit-knitting expansion")
+
+    # Assemble every term, but construct the backend, pass manager, and sampler only once.
+    assembled = []
+    for term in circuits:
+        term_circuit = QuantumCircuit(circuit.num_qubits, num_cx + circuit.num_qubits)
+        for instruction in term:
+            term_circuit.append(instruction)
+        term_circuit.measure(
+            range(circuit.num_qubits),
+            range(num_cx, num_cx + circuit.num_qubits),
+        )
+        assembled.append(term_circuit)
+
+    simulator_seed = simulator_seed if simulator_seed is not None else config.simulator_seed
+    transpiler_seed = transpiler_seed if transpiler_seed is not None else config.transpiler_seed
+    simulator_seed = 1 if simulator_seed is None else simulator_seed
+    transpiler_seed = 1 if transpiler_seed is None else transpiler_seed
+    batch_size = config.batch_size
+    if batch_size <= 0 or config.execution_batch_size <= 0:
+        raise ValueError("batch sizes must be positive")
+
+    backend = _make_backend(config.noise)
+    if hasattr(backend, "set_options"):
+        try:
+            backend.set_options(
+                max_parallel_experiments=config.max_parallel_experiments,
+                max_parallel_threads=config.max_parallel_threads,
+            )
+        except (AttributeError, TypeError):
+            pass
+    pass_manager = generate_preset_pass_manager(
+        optimization_level=config.optimization_level,
+        backend=backend,
+        seed_transpiler=transpiler_seed,
+    )
+    sampler = SamplerV2(
+        backend,
+        options={"simulator": {"seed_simulator": simulator_seed}},
+    )
+
+    versions = {
+        package: importlib.metadata.version(package)
+        for package in ("qiskit", "qiskit-aer", "qiskit-ibm-runtime")
+    }
+    compilation_identity = hashlib.sha256(
+        pickle.dumps(
+            (
+                circuit,
+                conq,
+                tarq,
+                config.noise,
+                config.optimization_level,
+                transpiler_seed,
+                versions,
+            ),
+            protocol=pickle.HIGHEST_PROTOCOL,
+        )
+    ).hexdigest()
+    run_identity = hashlib.sha256(
+        pickle.dumps(
+            (compilation_identity, num_shots, simulator_seed),
+            protocol=pickle.HIGHEST_PROTOCOL,
+        )
+    ).hexdigest()
+    cache_dir = Path(config.cache_dir) / compilation_identity
+    checkpoint_dir = Path(config.checkpoint_dir) / run_identity
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    raw_results = [None] * len(assembled)
+    transpile_seconds = 0.0
+    execute_seconds = 0.0
+    for batch_number, start in enumerate(range(0, len(assembled), batch_size)):
+        stop = min(start + batch_size, len(assembled))
+        checkpoint_path = checkpoint_dir / f"batch-{batch_number:05d}.pkl"
+        if config.resume and checkpoint_path.exists():
+            with checkpoint_path.open("rb") as stream:
+                batch_results = pickle.load(stream)
         else:
-            current_simulator_seed = np.random.randint(1024**2)
-            
-        if transpiler_seed is not None:
-            current_transpiler_seed = transpiler_seed + i  # Add iteration to ensure different seeds for each circuit
-        else:
-            current_transpiler_seed = np.random.randint(1024**2)
-        
-        temp_res_internal_meas = my_measure(item, conq, tarq, circuit.num_qubits, num_cx, num_shots, 
-                                            current_simulator_seed, current_transpiler_seed, config.noise)
-        temp_res = comb_measure(temp_res_internal_meas, conq, tarq, num_cx)
-        for sub_item in temp_res:
-            cum_tot[sub_item] += temp_res[sub_item] * prefac_list[i]
-    
+            cache_path = cache_dir / f"batch-{batch_number:05d}.pkl"
+            if cache_path.exists():
+                with cache_path.open("rb") as stream:
+                    transpiled = pickle.load(stream)
+            else:
+                started = time.perf_counter()
+                transpiled = pass_manager.run(assembled[start:stop])
+                transpile_seconds += time.perf_counter() - started
+                temporary = cache_path.with_suffix(".tmp")
+                with temporary.open("wb") as stream:
+                    pickle.dump(transpiled, stream, protocol=pickle.HIGHEST_PROTOCOL)
+                os.replace(temporary, cache_path)
+
+            batch_results = []
+            for execution_start in range(0, len(transpiled), config.execution_batch_size):
+                execution_stop = execution_start + config.execution_batch_size
+                started = time.perf_counter()
+                primitive_results = sampler.run(
+                    transpiled[execution_start:execution_stop], shots=num_shots
+                ).result()
+                execute_seconds += time.perf_counter() - started
+                batch_results.extend(
+                    result.data.c.get_counts() for result in primitive_results
+                )
+            temporary = checkpoint_path.with_suffix(".tmp")
+            with temporary.open("wb") as stream:
+                pickle.dump(batch_results, stream, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(temporary, checkpoint_path)
+
+        if len(batch_results) != stop - start:
+            raise RuntimeError(f"Incomplete knitting batch {batch_number}")
+        raw_results[start:stop] = batch_results
+
+    cum_tot = defaultdict(float)
+    for prefactor, internal_counts in zip(prefac_list, raw_results):
+        temp_res = comb_measure(internal_counts, conq, tarq, num_cx)
+        for bitstring, count in temp_res.items():
+            cum_tot[bitstring] += count * prefactor
     res_dict = {key: cum_tot[key] for key in sorted(cum_tot)}
-    
+
     return {
         'circuit': circuit,
         'results': res_dict,
         'config': config.__dict__,
         'timestamp': datetime.now().isoformat(),
         'qubits': {'start_qubit': start_qubit, 'end_qubit': end_qubit},
-        'num_cnots': num_cx
+        'num_cnots': num_cx,
+        'manifest': {
+            'run_id': run_identity,
+            'compilation_id': compilation_identity,
+            'versions': versions,
+            'num_terms': len(circuits),
+            'batch_size': batch_size,
+            'simulator_seed': simulator_seed,
+            'transpiler_seed': transpiler_seed,
+            'transpile_seconds': transpile_seconds,
+            'execution_batch_size': config.execution_batch_size,
+            'execute_seconds': execute_seconds,
+        },
     }
 
 
@@ -316,14 +436,23 @@ def save_experiment_results(
     Returns:
         Full path to saved file
     """
-    # Create full path
-    full_path = f"{config.results_dir}/{filename}.pkl"
-    
-    # Save results
-    with open(full_path, 'wb') as file:
+    result_dir = Path(config.results_dir)
+    result_dir.mkdir(parents=True, exist_ok=True)
+    full_path = result_dir / f"{filename}.pkl"
+    temporary = full_path.with_suffix(".pkl.tmp")
+    with temporary.open("wb") as file:
         pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
-    
-    return full_path
+    os.replace(temporary, full_path)
+
+    if "manifest" in results:
+        manifest_path = full_path.with_suffix(".manifest.json")
+        temporary_manifest = manifest_path.with_suffix(".json.tmp")
+        temporary_manifest.write_text(
+            json.dumps(results["manifest"], indent=2, sort_keys=True) + "\n"
+        )
+        os.replace(temporary_manifest, manifest_path)
+
+    return str(full_path)
 
 
 def load_experiment_results(filename: str, config: ExperimentConfig) -> Dict[str, Any]:

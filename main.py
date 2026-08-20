@@ -19,6 +19,28 @@ import pickle
 from datetime import datetime
 
 from functions import *
+from improved.config import ExperimentConfig as BatchedExperimentConfig
+from improved.experiment import circuit_knitter as batched_circuit_knitter
+
+
+def circuit_knitter(
+    qc, conq, tarq, num_shots, simulator_seed=1, transpiler_seed=1, noise=False
+):
+    """Compatibility wrapper routing production runs through the batched engine."""
+    config = BatchedExperimentConfig(noise=noise, num_shots=num_shots)
+    result = batched_circuit_knitter(
+        qc,
+        conq,
+        tarq,
+        num_shots,
+        config,
+        simulator_seed=simulator_seed,
+        # Compilation is intentionally fixed across statistical replicas.
+        transpiler_seed=20260819,
+    )
+    return result["results"]
+
+
 from params import *
 
 

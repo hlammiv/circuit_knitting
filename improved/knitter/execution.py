@@ -216,3 +216,13 @@ def flattener(nested_list: List) -> List:
         else:
             flat_list.append(item)
     return flat_list
+
+# Compatibility exports from the canonical six-term implementation.
+try:
+    from ..experiment import comb_measure, flattener, knit_lister, run_circuit_experiment
+except ImportError:
+    from experiment import comb_measure, flattener, knit_lister, run_circuit_experiment
+
+__all__ = [
+    "comb_measure", "flattener", "knit_lister", "run_circuit_experiment",
+]

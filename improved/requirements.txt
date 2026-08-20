@@ -3,10 +3,10 @@
 # This file lists the Python package dependencies for the improved
 # circuit knitting implementation.
 
-numpy>=1.21.0
-qiskit>=0.43.0
-qiskit-aer>=0.12.0
-qiskit-ibm-runtime>=0.12.0
+numpy==2.2.6
+qiskit==2.4.1
+qiskit-aer==0.17.2
+qiskit-ibm-runtime==0.48.0
 matplotlib>=3.5.0
 
 # Development dependencies

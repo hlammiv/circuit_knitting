@@ -17,7 +17,14 @@ class ExperimentConfig:
     step_values: list = field(default_factory=lambda: [1, 2])
     simulator_seed: Optional[int] = None
     transpiler_seed: Optional[int] = None
-    optimization_level: int = 3
+    optimization_level: int = 1
+    batch_size: int = 1
+    execution_batch_size: int = 1
+    max_parallel_experiments: int = 1
+    max_parallel_threads: int = 0
+    cache_dir: str = ".cache/circuit_knitting"
+    checkpoint_dir: str = "checkpoints/circuit_knitting"
+    resume: bool = True
 
 
 def get_config() -> ExperimentConfig:
@@ -29,3 +36,5 @@ def ensure_directories(config: ExperimentConfig):
     """Ensure required directories exist."""
     os.makedirs(config.data_dir, exist_ok=True)
     os.makedirs(config.results_dir, exist_ok=True)
+    os.makedirs(config.cache_dir, exist_ok=True)
+    os.makedirs(config.checkpoint_dir, exist_ok=True)

@@ -27,6 +27,8 @@ paper/*.synctex.gz
 paper/*.toc
 paper/*.tdo
 paper/main.pdf
+.cache/
+checkpoints/
 paper/*Notes.bib
 
 # Local test/build output
