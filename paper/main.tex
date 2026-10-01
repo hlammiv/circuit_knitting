@@ -480,19 +480,18 @@ The summed weight, however, is the squared norm of the projection of $\mathcal{O
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/fv_gaplo.pdf}
-    \caption{Top: weighted gap $\overline{\Delta}$, Eq.~\eqref{eq:Dbardef}, versus the inverse number of sites $1/N_s$ for PBC (squares) and OBC (circles) at $(m_0,\eta)=(0.1,0.5)$; the corresponding values of $N_s$ are marked along the top, and the infinite-volume limit is the left edge.
-    The dashed line is the infinite-volume value $\overline{\Delta}_\infty$ taken from PBC at $N_s=10$, and the solid curve is the $1/N_s$ series of Eq.~\eqref{eq:dbarfit}.
-    Bottom: $N_s$ times the magnitude of the difference between the OBC result and the infinite-volume value, on the same horizontal axis, for $\overline{\Delta}$ (circles) and for the summed weight $W$ of Eq.~\eqref{eq:Wdef} (diamonds).
-    A correction that begins at order $1/N_s$ extrapolates to a nonzero intercept.
-    Solid curves are the series of Eqs.~\eqref{eq:dbarfit} and~\eqref{eq:wfit}, drawn over the sizes they describe.
-    Each shaded band is the envelope of the uncertainty ranges of that fit and of two neighboring acceptable fits, the series of one order lower and the same series with the next larger $N_{\min}$, so that it includes the effect of truncating the series; in the top panel the band is narrower than the line.
-    Filled symbols enter the fit shown by the solid curve and open symbols do not; $N_s=24$ is held out of every fit.
-    Error bars are conservative convergence estimates (see text) and are smaller than the symbols where not visible.
+    \caption{Top and middle: weighted gap $\overline{\Delta}$, Eq.~\eqref{eq:Dbardef}, and summed weight $W$, Eq.~\eqref{eq:Wdef}, versus $1/N_s$ for PBC (squares) and OBC (circles) at $(m_0,\eta)=(0.1,0.5)$; $N_s$ is marked along the top and the infinite-volume limit is the left edge.
+    Dashed lines are the PBC values at $N_s=10$; solid curves are the series of Eqs.~\eqref{eq:dbarfit} and~\eqref{eq:wfit}, drawn over the sizes they describe.
+    Bottom: $N_s$ times the magnitude of the difference between the OBC result and the infinite-volume value, for $\overline{\Delta}$ (circles) and $W$ (diamonds).
+    Because the difference falls as $1/N_s$, this product approaches a nonzero value at the left edge, the magnitude of the coefficient $b$ in Eq.~\eqref{eq:series}.
+    Each band is the envelope of the uncertainty ranges of the fit and of two neighboring acceptable fits (one order lower; next larger $N_{\min}$); in the upper panels it is narrower than the line.
+    Filled OBC symbols enter the fit shown and open ones do not; $N_s=24$ is held out of every fit.
+    Error bars are conservative convergence estimates (see text).
     \label{fig:fv_gaplo}}
 \end{figure}
 
 \inlinesection{Results.}
-Table~\ref{tab:fv-data} and the top panel of Fig.~\ref{fig:fv_gaplo} show the two moments at each size.
+Table~\ref{tab:fv-data} and the upper two panels of Fig.~\ref{fig:fv_gaplo} show the two moments at each size.
 With PBC the weighted gap is $1.46407$ at $N_s=4$, $1.46643$ at $N_s=6$, and $1.46646$ at $N_s=8$ and $10$.
 It is thus $0.16\%$ below its limit at $N_s=4$ and within $0.002\%$ of it by $N_s=6$, as expected for exponentially small corrections.
 These statements refer to the central values, on which the two implementations agree to $3\times10^{-8}$ for $N_s\le10$; the uncertainties in Table~\ref{tab:fv-data} are the more conservative estimates described above.
