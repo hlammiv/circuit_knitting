@@ -373,7 +373,6 @@ We ask how far its energy gap, measured with a volume-averaged operator on $N_s$
 All results are for $m_0=0.1$ and $\eta=0.5$, with matter sites labeled $n=1,\dots,N_s$ and the sums over links in Eq.~\eqref{eq:z2ham} running over the $N$ links of Eq.~\eqref{eq:upper_limit}.
 Technical details are collected in App.~\ref{app:dmrg}.
 
-\inlinesection{Physical states.}
 The Hamiltonian commutes with the Gauss-law operators
 \begin{equation}
 \label{eq:gauss}
@@ -385,7 +384,6 @@ We therefore add to $H$ the penalty $H_G=\tfrac{\lambda_G}{2}\sum_n[1-(-1)^nG_n]
 With OBC the chain ends on matter sites, and the Gauss-law operator at each end needs a value for the electric field on the missing link, which is equivalent to placing a static charge beyond that end.
 We choose the value for which no flux enters the chain; it is the choice whose spectrum corresponds to that of the periodic lattice.
 
-\inlinesection{Observables.}
 An open chain has no momentum eigenstates, so we use an operator that is defined in the same way for both boundary conditions,
 \begin{equation}
 \label{eq:Odef}
@@ -422,7 +420,6 @@ We take $\overline{\Delta}$ as the primary observable: it is an energy, like the
 The summed weight does: writing $N_s$ for $N$ in Eq.~\eqref{eq:Odef} changes the size and the sign of its $1/N_s$ correction for OBC, though not the fact that there is one.
 We report $W$ as well because it is determined far more precisely.
 
-\inlinesection{Results.}
 We compute the lowest eigenstates of $H+H_G$ with the density-matrix renormalization group (DMRG)~\cite{White:1992zz} for even $N_s$ from $4$ to $18$ and for $N_s=24$.
 The results agree with exact diagonalization at $N_s=4$ and $6$ to better than $4\times10^{-7}$, and two independent implementations agree to $3\times10^{-6}$ for $N_s\le10$.
 The uncertainties are conservative estimates of the convergence error, not statistical standard deviations.
@@ -448,7 +445,6 @@ The weighted gap is $3.6\%$ below $\overline{\Delta}_\infty$ at $N_s=4$ and stil
     \label{fig:fv_gaplo}}
 \end{figure}
 
-\inlinesection{Form of the finite-volume correction.}
 The boundary-layer argument at the start of this section predicts that the OBC results approach the PBC limit as a power series in $1/N_s$ that begins at first order,
 \begin{equation}
 \label{eq:series}
@@ -474,8 +470,7 @@ Because the difference from the infinite-volume value falls as $1/N_s$, its prod
 If $y_\infty$ is left free in these fits, the OBC results alone give limits that differ from the PBC values by $+0.0004(16)$ for $\overline{\Delta}$ and $-0.00004(6)$ for $W$: the two boundary conditions agree at infinite volume to $0.1\%$ and $0.01\%$.
 In practical terms, with OBC the weighted gap is within $1\%$ of its limit only for $N_s\ge14$, and $0.1\%$ would require $N_s\approx120$; with PBC it is within $0.16\%$ at $N_s=4$ and $0.002\%$ at $N_s=6$.
 
-\inlinesection{Origin of the $1/N_s$ correction.}
-The operator $\mathcal{O}$ acts with the same amplitude on every link, but an open chain is distorted near its ends.
+The $1/N_s$ correction has a simple origin: the operator $\mathcal{O}$ acts with the same amplitude on every link, but an open chain is distorted near its ends.
 At $N_s=24$ the occupation of the matter sites in the ground state, $\nu_n\equiv\tfrac12\left[1-(-1)^n\langle Z_n\rangle\right]$, is $0.0635$ on every site with PBC; with OBC it is $0.0349$ on the end sites and returns to the PBC value within about three sites.
 The terms of Eq.~\eqref{eq:Odef} inside these boundary layers are a fraction of order $1/N_s$ of the total, and they shift both moments by an amount of that order.
 The same holds for any volume-averaged quantity; the mean occupation, for example, is lower with OBC by $0.052/N_s$.
