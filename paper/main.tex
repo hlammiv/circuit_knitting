@@ -356,172 +356,237 @@ where $\mathcal{U}(t/\varepsilon)$ is defined in Eq.~\eqref{eq:secondordertrotte
 \section{Infinite Volume Limit and Boundary Conditions}
 \label{sec:infvolbc}
 
-A central question for quantum simulations {\color{magenta} (Mike: ...) } is how faithfully small-lattice
-OBC or PBC results represent the infinite-volume theory.  With PBC, the
-L\"uscher analysis~\cite{Luscher:1985dn,Luscher:1986pf} shows finite-volume
-corrections to single-particle masses from momentum-projected correlators
-to be exponentially small in $mL$.  Boundary terms, in contrast, perturb
-the ground state in a layer set by the correlation length, so a
-spatial-average observable picks up a $1/L$ power-law contribution
-from the boundary layer~\cite{Symanzik:1981wd}, an effect also seen in
-chiral perturbation theory at small $m_\pi L$~\cite{Hasenfratz:1989pk}
-and at criticality~\cite{Cardy:1984bb}; we observe this $1/L$ scaling
-below for the mesonic OBC observable.
+Quantum simulations will for some time be restricted to lattices with few sites.
+How quickly an observable approaches its infinite-volume value as the lattice grows therefore decides how large a lattice is needed for a given accuracy, and the answer depends on the boundary conditions.
+With PBC every site is equivalent, and in a theory with a mass gap the finite-volume corrections to single-particle masses fall off exponentially in the box length $L$ measured in units of the correlation length~\cite{Luscher:1985dn,Luscher:1986pf}.
+With OBC the two ends of the lattice break translation invariance.
+The ground state is distorted within a correlation length of each end, and a quantity averaged over the volume receives from these two boundary layers a correction proportional to the fraction of the volume they occupy, that is, to $1/L$~\cite{Symanzik:1981wd}.
+Power-law rather than exponential finite-size corrections also arise, for different reasons, in chiral perturbation theory at small $m_\pi L$~\cite{Hasenfratz:1989pk} and in systems at criticality~\cite{Cardy:1984bb}.
+In this section we first quantify both behaviors for the model of Sec.~\ref{sec:theory} with tensor-network calculations, and then estimate the gate cost of implementing PBC with SWAP networks.
+In one dimension the box length in lattice units is the number of sites, $L=N_s$; we write $N_s$ in Sec.~\ref{sec:mass_gap_L} and keep $L$ for the discussion of general dimension in Sec.~\ref{sec:swap}.
 
-\subsection{Mass gap of \texorpdfstring{$\mathbb{Z}_2$}{Z2} as a function of $L$}
+\subsection{Finite-volume dependence of the meson gap}
 \label{sec:mass_gap_L}
 
-{\color{magenta} Mike: overlap factors between operators and meson states are a straightforward thing to compute with DMRG that enter as ingredients to lots of other calculations of matrix elements. 
+The electron-positron bound state of Sec.~\ref{sec:theory}, which we call the meson, is created from the vacuum by the operator $O_n$ of Eq.~\eqref{eq:exciteoperator}.
+We ask how far the energy gap of this meson, measured with a volume-averaged operator on a lattice of $N_s$ sites, lies from its infinite-volume value, for periodic and for open boundaries.
+The result is that with PBC the gap is within $0.002\%$ of its limit already at $N_s=6$, whereas with OBC it approaches the same limit only as $1/N_s$ and is still $0.5\%$ low at $N_s=24$.
+All results in this subsection are for $m_0=0.1$ and $\eta=0.5$.
+We label the matter sites $n=1,\dots,N_s$ and the links by the pair of sites they join, and the sums over links in the Hamiltonian of Eq.~\eqref{eq:z2ham} run over the $N$ links of Eq.~\eqref{eq:upper_limit}.
 
-Don't use $k$ for eigenstates that don't have definite momentum. Use $|n>$ for general energy eigenstates.
-
-What happens to zeroth moment $\sum_{k < k_{\rm cut}(N_s)} w_k$? Does it have a well-defined $L\rightarrow \infty$ limit so that we don't have to start with this $w_k$ weighted gap observable?
-
-Alternatively, could we use $\left< n_{e^-} + n_{e^+} \right> \sim \left< n_n \right> \sim \left< N_f \right>$
-
-Swap $L$ for $N_s$. Should it be $e^{-M N_s}$
-
-Rephrase as hypothesis testing of which model describes the OBC data --- I'm pretty sure that one expects $1/L$ a priori, if fitting more general forms confirms that I think we can just run with it and avoid having to do any BMA
-}
-
-To avoid selecting a single eigenstate by hand and to keep the formal
-definition identical for OBC and PBC, we use the overlap-weighted
-spectral first moment of the zero-momentum projection of the excitation
-operator of Eq.~\eqref{eq:exciteoperator},
-% \begin{equation}
-%    \mathcal{O}_{p=0} \;\equiv\; \frac{1}{\sqrt{N_s}} \sum_{n} X_n\,\sigma^{z}_{n,n+1}\,X_{n+1},
-% \label{eq:Op0def}
-% \end{equation}
+\inlinesection{Physical states and boundary charges.}
+The Hamiltonian commutes with the Gauss-law operators
 \begin{equation}
-   \mathcal{O}_{p=0} \;\equiv\; \frac{1}{\sqrt{N_s}} \sum_{n} O_n%,
-   % \quad
-   % O_n \;=\; X_n\,\sigma^{z}_{n,n+1}\,X_{n+1},
-\label{eq:Op0def}
+\label{eq:gauss}
+    G_n = \sigma^{x}_{n-1,n}\, Z_n\, \sigma^{x}_{n,n+1},
 \end{equation}
-with the meson-band-restricted first moment {\color{magenta} (Mike: ?) }
+one for each matter site, which combine the fermion parity of the site with the electric fields on the two links attached to it.
+Physical states are those without static charges, $G_n\ket{\psi}=(-1)^n\ket{\psi}$ for every $n$, where the alternating sign follows the alternating occupation of the staggered vacuum.
+The time evolution of Sec.~\ref{sec:numresults} remains in this sector because, as noted in Sec.~\ref{sec:theory}, the initial state is constructed in it.
+A calculation of the spectrum, in contrast, encounters every sector, and the eigenstates of $H$ with static charges lie at energies comparable to those of the physical states.
+We therefore add to $H$ the energy penalty
 \begin{equation}
-\label{eq:gbarOdef}
-   \overline{\Delta} \;\equiv\;
-   \frac{\sum_{k:\, g_k<g_{\rm cut}} w_n\, \Delta_n}{\sum_{k:\, g_k<g_{\rm cut}} w_n},
-   \,
-   w_n \;=\; \big| \langle n|\mathcal{O}_{p=0}|\Omega\rangle\big|^2 ,
+\label{eq:gausspenalty}
+    H_G = \frac{\lambda_G}{2}\sum_{n=1}^{N_s}\left[1-(-1)^n G_n\right],
 \end{equation}
-where $\Delta_{n} \equiv E_n-E_0$ are gaps above the vacuum $|\Omega\rangle$ and \textcolor{orange}{(Ruth: use $\Delta$ instead of g, dont label states as $|k\langle$ when theyre not momentum eigenstates)}
-$g_{\rm cut}=2$ sits below the lowest high-band state at $g\simeq 2.38$
-(verified to remain above $g_{\rm cut}$ across all $L$ studied), {\color{red}thus} isolating the meson band that $\mathcal{O}_{p=0}$ produces from the
-vacuum. 
+which vanishes on physical states and raises every other state by at least $\lambda_G$.
+We use $\lambda_G=20$, which places the unphysical states far above the energies of interest.
 
-\textcolor{orange}{(Ruth: rewrite to say G's are Gauss law operators at beginning so connection to boundary charges is more logical/intuitive)}At fixed bare parameters $(m_0,\eta,\alpha)=(0.1,0.5,1)$,
-$\overline{g}_{\mathcal{O}_{p=0}}$ should converge to a common
-$L\to\infty$ limit under both boundary conditions.
-{\color{blue}physics intuition and cleaner talk}
-For OBC, the boundary links are truncated in the $xz$ basis and the two
-boundary generators $G_1,\,G_{N_s}$ require external boundary-charge
-inputs $\mathrm{bg}_L,\mathrm{bg}_R\in\{\pm 1\}$.  
-Of the four sign assignments scanned at $L=8$, only $(\mathrm{bg}_L,\mathrm{bg}_R)=(-,-)$ gives a clean correspondence with the PBC meson at $g\simeq 3.39$; the other three admit a boundary-localized state at $g\simeq 1.07$ below
-the bulk meson, and we use $(-,-)$ throughout.  
-To suppress drift into unphysical Gauss sectors during the
-variational search we add the soft penalty $H_{\rm Gauss}=-\tfrac{\lambda_{\rm G}}{2}\sum_n\eta_n G_n$ with $G_n=\sigma^{x}_{n-1,n}Z_n\sigma^{x}_{n,n+1}$ and $\lambda_{\rm G}=20$, omitted on boundary links for OBC.
+With PBC every site has two links and Eq.~\eqref{eq:gauss} applies as written.
+With OBC the chain ends on matter sites, so the end sites $n=1$ and $n=N_s$ each lack one link.
+The Gauss-law operator at an end site then needs a value for the electric field on the missing link.
+Choosing this value specifies the electric flux that enters the chain from outside or, equivalently, a static charge placed beyond that end.
+We write $G_1=q_L\,Z_1\,\sigma^{x}_{1,2}$ and $G_{N_s}=\sigma^{x}_{N_s-1,N_s}\,Z_{N_s}\,q_R$ with $q_L,q_R=\pm1$.
+The gauge term of Eq.~\eqref{eq:z2ham} has its lowest energy for $\sigma^x=-1$, which is therefore the value on a link that carries no flux; $q_L=q_R=-1$ thus describes a chain into which no flux enters.
+We confirmed by exact diagonalization at $N_s=4$ and $6$ that this is the choice whose spectrum corresponds to that of the periodic lattice: the lowest excitation lies at an energy $1.29$ above the ground state, as it does with PBC.
+Each end at which $q=+1$ is chosen instead raises the ground-state energy by $0.146$ and adds one state at an energy $1.05$ above the ground state, below every excitation of the periodic lattice and independent of $N_s$, as expected for a state bound to the static charge at that end.
+We use $q_L=q_R=-1$ throughout.
 
-For each even $L$ from $4$ to $18$, and additionally $L=24$, we compute the lowest $k_{\rm max}+1$ eigenpairs of $H+H_{\rm Gauss}$ via density matrix renormalization group (DMRG)~\cite{White:1992zz}, with $k_{\rm max}=30$ ($L\leq 18$) or $40$. 
-($L=24$), which we numerically confirmed fully contain the meson band.  Excited states use orthogonality penalties of weight $200$, and
-a cold-start noise schedule $[10^{-7},10^{-8},10^{-9},0]$ suppresses
-trapping in unphysical Gauss sectors.  Converged bond dimensions do
-not exceed $\chi\simeq 55\ll\chi_{\max}=400$.
-Sweep convergence is verified by warm-starting from saved MPSs until
-per-state variances and $\overline{g}_{\mathcal{O}_{p=0}}$ stabilize
-at $\sim\!10^{-3}$, with the residual scatter folded into the error
-bars of Fig.~\ref{fig:fv_gaplo}.
-The PBC values are seen to converge within statistical errors by
-$L=16$, so for the larger volumes we report the $L=18$ and $L=24$ PBC
-as the mean and standard deviation of the $L=10$--$16$ PBC plateau.
-Fig.~\ref{fig:fv_gaplo} summarizes the results.  
-At $L\geq 6$ the PBC value of $\overline{g}_{\mathcal{O}_{p=0}}$ sits on a plateau at $\simeq 1.466$ with no resolved volume dependence ($L=4$ is slightly
-off at $1.464$); the OBC value rises monotonically from $1.413$ ($L=4$)
-to $1.459$ ($L=24$) toward this plateau, with the difference
-$\mathrm{OBC}-\mathrm{PBC}$ (using the plateau-averaged PBC at
-$L=18,24$ as noted above) shrinking from $-0.0508$ to $-0.007$ across
-the same range.
+\inlinesection{Observables.}
+On a periodic lattice the natural quantity is the gap between the ground state and the state created from it by the zero-momentum projection of $O_n$.
+An open chain has no momentum eigenstates, so we need a definition that can be evaluated in the same way for both boundary conditions.
+We use the volume-averaged operator
+\begin{equation}
+\label{eq:Odef}
+   \mathcal{O} \equiv \frac{1}{\sqrt{N}} \sum_{n=1}^{N} O_n,
+   \qquad
+   O_n = X_n\,\sigma^{z}_{n,n+1}\,X_{n+1},
+\end{equation}
+where $N$ is the number of links given in Eq.~\eqref{eq:upper_limit}.
+With PBC, $\mathcal{O}$ is the projection of $O_n$ onto zero momentum.
+Let $\ket{E_j}$, $j=0,1,2,\dots$, denote the eigenstates of $H+H_G$ in order of increasing energy.
+The ground state $\ket{E_0}$ is the interacting vacuum and should not be confused with the product state $\ket{\Omega}$ of Eq.~\eqref{eq:compstates}.
+The operator $\mathcal{O}$ connects the ground state to the excited state $\ket{E_j}$, which lies at the gap $\Delta_j$, with weight $w_j$:
+\begin{equation}
+\label{eq:weights}
+   w_j = \big|\mbraket{E_j}{\mathcal{O}}{E_0}\big|^2,
+   \qquad
+   \Delta_j = E_j-E_0 .
+\end{equation}
+Inserting a complete set of energy eigenstates, as was done to obtain Eq.~\eqref{eq:spec}, shows that these are the weights and frequencies of the correlation function of $\mathcal{O}$ in the ground state, $\mbraket{E_0}{\mathcal{O}(t)\,\mathcal{O}(0)}{E_0}=\sum_j w_j\,e^{-i\Delta_j t}$.
+The overlap factors $w_j$ are of interest in their own right, since they enter the extraction of matrix elements, and they are obtained directly in a tensor-network calculation.
+
+For the parameters used here the lowest excitations form a band of single-meson states.
+With PBC the band contains $N_s$ states, distinguished by their lattice momentum, with gaps between $1.287$ and $1.466$; with OBC it contains $N_s-1$ states in nearly the same range.
+A wide interval separates this band from the next group of levels, which begins at a gap of about $2.34$.
+With PBC, translation invariance allows $\mathcal{O}$ to excite only one state of the band, the zero-momentum meson.
+For these parameters it is the highest state of the band, at a gap of $1.466$; the lowest state, at $1.287$, is not excited by $\mathcal{O}$.
+With OBC momentum is not conserved and $\mathcal{O}$ excites several states of the band.
+At $N_s=8$, for example, the highest state of the band carries $82\%$ of the weight in the band and lower states carry the rest, so no single eigenstate can be identified as the meson at rest.
+We therefore characterize the band as a whole through two moments of the weights,
+\begin{align}
+\label{eq:Wdef}
+   W &\equiv \sum_{j:\,\Delta_j<\Delta_{\rm cut}} w_j ,\\
+\label{eq:Dbardef}
+   \overline{\Delta} &\equiv \frac{1}{W}\sum_{j:\,\Delta_j<\Delta_{\rm cut}} w_j\,\Delta_j ,
+\end{align}
+where $\Delta_{\rm cut}=2$ lies in the interval above the band, so that the sums run over exactly the single-meson states.
+The summed weight $W$ measures how strongly $\mathcal{O}$ creates a single meson, and the weighted gap $\overline{\Delta}$ is the mean energy of the mesons it creates.
+With PBC, $\overline{\Delta}$ is the gap of the zero-momentum meson, which we call the meson gap, and $W$ is the squared overlap of that state with $\mathcal{O}\ket{E_0}$.
+Both moments have well-defined infinite-volume limits, and in that limit each must take the same value for the two boundary conditions.
+
+We take $\overline{\Delta}$ as the primary observable for two reasons.
+It is an energy, the kind of quantity extracted from the simulations of Sec.~\ref{sec:numresults}.
+It is also independent of the normalization of $\mathcal{O}$, whereas $W$ is not: replacing $N$ by $N_s$ in Eq.~\eqref{eq:Odef}, an equally natural convention, multiplies $W$ for OBC by $(N_s-1)/N_s$ and so changes the size, and even the sign, of the $1/N_s$ correction we wish to study.
+We nevertheless report $W$ alongside $\overline{\Delta}$.
+It is determined far more precisely, and whether its finite-volume correction begins at order $1/N_s$ can be tested sharply, because a correction of that order is present in either convention.
+
+\inlinesection{Calculation.}
+We compute the lowest eigenstates of $H+H_G$ with the density-matrix renormalization group (DMRG)~\cite{White:1992zz} for even $N_s$ from $4$ to $18$ and for $N_s=24$, computing enough eigenstates at each size to contain the whole band.
+Technical details are collected in App.~\ref{app:dmrg}.
+Three checks support the results.
+First, at $N_s=4$ and $6$ we also diagonalize $H+H_G$ exactly, and the DMRG values of $\overline{\Delta}$ and $W$ agree with the exact ones to better than $4\times10^{-7}$.
+Second, two independent implementations of the calculation agree to $3\times10^{-6}$ in $\overline{\Delta}$ and $6\times10^{-8}$ in $W$ for $N_s\le10$, and to $2\times10^{-4}$ and $3\times10^{-6}$ at $N_s=12$.
+We quote the results of one implementation throughout.
+For $N_s\ge14$ it was carried to tighter convergence than the other, whose results are consistent with it within their own larger uncertainties.
+Third, the number of states found below $\Delta_{\rm cut}$ equals $N_s$ for PBC and $N_s-1$ for OBC in every calculation.
+
+The uncertainty on $\overline{\Delta}$ is dominated by the convergence of the DMRG states.
+For each state we compute the standard deviation of its energy, $\delta E_j=(\langle (H+H_G)^2\rangle-\langle H+H_G\rangle^2)^{1/2}$, which bounds the distance of that energy from an exact eigenvalue~\cite{Weinstein:1934}, and we propagate these through Eq.~\eqref{eq:Dbardef}.
+To this we add in quadrature the scatter among calculations started from different random states.
+For $N_s\ge14$ the states were improved in several successive stages (App.~\ref{app:dmrg}), and we also add the amount by which $\overline{\Delta}$ changed in the last of them.
+The resulting uncertainties are conservative estimates of the convergence error, not statistical standard deviations.
+For PBC with $N_s\ge12$, where the result is known from the smaller lattices, the observed deviations are no more than about half of the quoted uncertainty.
+They all have the same sign: incomplete convergence lowers $\overline{\Delta}$, and the OBC results at the largest sizes may be low for the same reason, by an amount covered by their uncertainties.
+The uncertainty on $W$ combines the scatter among starting states, the difference between the two implementations where both are available, and the change in the last stage, and is never taken smaller than the accuracy established against exact diagonalization.
+
+The summed weight is much better determined than the weighted gap at large $N_s$.
+As the lattice grows, the levels of the band move closer together and a DMRG state can mix neighboring levels.
+This degrades the individual energies that enter $\overline{\Delta}$.
+The summed weight, however, is the squared norm of the projection of $\mathcal{O}\ket{E_0}$ onto the band, which does not change when states within the band are mixed.
+
+\input{generated/fv_data_table}
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/fv_gaplo.pdf}
-    \caption{$\overline{g}_{\mathcal{O}_{p=0}}$ vs $L$ for OBC (blue
-    circles) and PBC (red squares) at $(m_0,\eta,\alpha)=(0.1,0.5,1)$
-    with $\mathrm{bg}_L=\mathrm{bg}_R=-1$.  The red dashed line and
-    band show the PBC plateau mean and standard deviation over
-    $L\!\in\![10,16]$, used for the $L=18,24$ PBC entries in the lower
-    panel.  Open OBC symbols at $L=24$ are held out from the fits as a
-    posterior cross-check.  Bottom: OBC$-$PBC with the AIC$^*$-weighted
-    extrapolation band, widened at small $L$ by fit forms that drop
-    $L=4,6$.  Dashed line marks zero.
-    {\color{magenta} be consistent with open symbols as not fitted points in bottom panel. Maybe keep them closed in top panel?}
+    \caption{Top: weighted gap $\overline{\Delta}$, Eq.~\eqref{eq:Dbardef}, versus the number of sites $N_s$ for PBC (squares) and OBC (circles) at $(m_0,\eta)=(0.1,0.5)$.
+    The dashed line is the infinite-volume value $\overline{\Delta}_\infty$ taken from PBC at $N_s=10$, and the solid curve is the $1/N_s$ series of Eq.~\eqref{eq:dbarfit}.
+    Bottom: $N_s$ times the difference between OBC and the infinite-volume value, versus $1/N_s$, for $\overline{\Delta}$ (circles) and for the summed weight $W$ of Eq.~\eqref{eq:Wdef} (diamonds).
+    A correction that begins at order $1/N_s$ extrapolates to a nonzero intercept; one that falls faster extrapolates to zero.
+    Solid curves are the series of Eqs.~\eqref{eq:dbarfit} and~\eqref{eq:wfit} with their uncertainty bands, and dashed curves are the best-fit three-parameter series beginning at $1/N_s^2$, fitted to $6\le N_s\le18$.
+    In both panels filled symbols enter the fits and open symbols ($N_s=24$) are held out.
+    Error bars are conservative convergence estimates (see text) and are smaller than the symbols where not visible.
     \label{fig:fv_gaplo}}
 \end{figure}
 
-To extrapolate to $L\to\infty$ we perform weighted fits of the OBC$-$PBC
-difference data ($L\leq 18$, with $L=24$ held out) with five functional
-forms,
+\inlinesection{Results.}
+Table~\ref{tab:fv-data} and the top panel of Fig.~\ref{fig:fv_gaplo} show the two moments at each size.
+With PBC the weighted gap is $1.46407$ at $N_s=4$, $1.46643$ at $N_s=6$, and $1.46646$ at $N_s=8$ and $10$.
+It is thus $0.16\%$ below its limit at $N_s=4$ and within $0.002\%$ of it by $N_s=6$, as expected for exponentially small corrections.
+These statements refer to the central values, on which the two implementations agree to $3\times10^{-8}$ for $N_s\le10$; the uncertainties in Table~\ref{tab:fv-data} are the more conservative estimates described above.
+The summed weight behaves in the same way and varies by less than $2\times10^{-5}$ for $6\le N_s\le24$.
+We take the PBC values at $N_s=10$ as the infinite-volume results, with uncertainties that also cover the change from $N_s=8$,
 \begin{equation}
-\begin{split}
-   &a+b/L,\qquad a+b/L^2,\qquad a+b/L+c/L^2,\\
-   &a+b/L^{\beta},\qquad a+b\,e^{-m_{\rm meson} L},
-\label{eq:fitforms}
-\end{split}
+\label{eq:pbcinf}
+   \overline{\Delta}_\infty = 1.46646(14), \qquad W_\infty = 0.6652838(4).
 \end{equation}
-each with even $L_{\min}$ from $4$ to $12$.  To keep the more flexible
-forms from degenerating, $\beta$ is bounded to $[0.5,3]$ and the
-exponential rate is pinned to $m_{\rm meson}\simeq 1.466$ (the converged
-PBC plateau), turning that form into a L\"uscher check; letting $m$
-float instead converges robustly to $m\simeq 0.26$ with $\chi^2/{\rm dof}\!\ll\!1$
-but extrapolates to a biased plateau $\sim\!-0.009$, a fit-form artifact
-since the data at $L\leq 18$ remain in the polynomial regime.  Fits are
-combined via the corrected Akaike weighting of
-Jay--Neil~\cite{Jay:2020jdy,Neil:2022joj},
-$\mathrm{AIC}^*=\chi^2+2k+2(N_{\max}-n)$, which generalises the standard
-AIC~\cite{Akaike:1974ic} to penalise both parameters and dropped data
-points in the style now standard in lattice flavor
-physics~\cite{FlavourLatticeAveragingGroupFLAG:2024oxs}; weights are
-$w_i\propto\exp(-\mathrm{AIC}_i^*/2)$ and total uncertainty
-$\sigma_{\rm tot}^2=\sum_i w_i\sigma_i^2+\sum_i w_i(a_{\infty,i}-\langle a_\infty\rangle)^2$
-combines statistical and inter-fit spread.
-The average is shown as the band in Fig.~\ref{fig:fv_gaplo} (bottom)
-and gives
-\begin{equation}
-\begin{split}
-   \lim_{L\to\infty}\,
-   &\big[\overline{g}_{\mathcal{O}_{p=0}}\big]_{\rm OBC}
-   - \big[\overline{g}_{\mathcal{O}_{p=0}}\big]_{\rm PBC}\\
-   \;&=\; -0.001(13)_{\rm stat}(4)_{\rm sys} ,
-\label{eq:ainfresult}
-\end{split}
-\end{equation}
-with the statistical error from averaged parameter uncertainties and
-the systematic from inter-fit spread.  Restricting to the two
-well-constrained two-parameter forms gives the tighter and
-consistent $-0.0004(57)$, showing the wide full-set error is driven by
-the under-constrained $1/L^{\beta}$ and $1/L+1/L^2$ fits at large
-$L_{\min}$ rather than by genuine model tension.  Either reading is
-consistent with zero, as required by bulk universality.
+The PBC values of $\overline{\Delta}$ at $N_s\ge12$ have larger uncertainties, for the reason given above, and are consistent with $\overline{\Delta}_\infty$.
 
-On a periodic ring $\mathcal{O}_{p=0}$ is a genuine zero-momentum
-projection; on an open chain Eq.~\eqref{eq:Op0def} is a spatial average
-that automatically averages over the boundary distortion of the ground
-state.  Site-resolved matter occupation
-$n_n\equiv\tfrac12(1-(-1)^n\langle Z_n\rangle)$ at $L=24$ confirms this
-picture: PBC is flat at $\langle n_n\rangle=0.0635$, while OBC dips to
-$0.0349$ at the two boundary sites with the perturbation decaying
-within $\sim\!3$ sites of each end.  Since only $\mathcal{O}(1)$
-boundary terms in $\sum_n O_n$ differ from PBC while the remaining
-$\mathcal{O}(L)$ reproduce the bulk contribution, both numerator and
-denominator of Eq.~\eqref{eq:gbarOdef} pick up boundary corrections
-that scale identically in the $N_s^{-1/2}$ prefactor; the ratio thus
-inherits the $\mathcal{O}(1)/\mathcal{O}(L)$ imbalance, giving the
-OBC$-$PBC difference as $\mathcal{O}(1/L)$.  The L\"uscher exponential
-correction~\cite{Luscher:1985dn} is not absent, but with
-$m\simeq 1.466$ as a conservative lower bound on the exchanged exponent
-(a self-coupled meson with no three-meson vertex gives at least $2m$),
-$\exp(-mL)\ll 1/L$ across our volumes, so the polynomial dominates.
+With OBC the approach to the limit is slow.
+The weighted gap rises from $1.41324$ at $N_s=4$, which is $3.6\%$ below $\overline{\Delta}_\infty$, to $1.4588(21)$ at $N_s=24$, still $0.5\%$ below.
+The summed weight falls from $8.0\%$ above $W_\infty$ at $N_s=4$ to $1.0\%$ above at $N_s=24$.
+
+\inlinesection{Form of the finite-volume correction.}
+The boundary-layer argument at the start of this section predicts that the leading difference between the OBC results and the PBC limit is of order $1/N_s$.
+Allowing for higher powers, which arise for example from the factor $N=N_s-1$ in Eq.~\eqref{eq:Odef} and from the ratio in Eq.~\eqref{eq:Dbardef}, we expect a power series in $1/N_s$ that begins at first order,
+\begin{equation}
+\label{eq:series}
+   y_{\rm OBC}(N_s) = y_\infty + \frac{b}{N_s}+\frac{c}{N_s^2}+\frac{d}{N_s^3}+\dots ,
+\end{equation}
+where $y$ stands for $\overline{\Delta}$ or $W$.
+We test this hypothesis against alternatives in which the correction falls off faster: a series that begins at $1/N_s^2$, as would describe a single energy level of a particle confined to a box; an exponential, either with a free rate $\kappa$ or with the rate fixed to the meson gap, $M\equiv\overline{\Delta}_\infty$; and a single power $b/N_s^{\beta}$ with $\beta$ free.
+Each form is fitted to the OBC results with $N_{\min}\le N_s\le18$ by minimizing $\chi^2$, for $N_{\min}=4,6,\dots,12$.
+The limit $y_\infty$ is a fit parameter constrained to the PBC value: Eq.~\eqref{eq:pbcinf} enters the $\chi^2$ as one additional data point.
+The result at $N_s=24$ is held out of every fit and compared with the prediction.
+We call a fit acceptable if its $\chi^2$ probability exceeds $5\%$.
+Because the uncertainties on $\overline{\Delta}$ are conservative, the acceptable fits of Eq.~\eqref{eq:series} to $\overline{\Delta}$ have $\chi^2$ well below the number of degrees of freedom; the test is then conservative, in that a rejected form fails by more than its $\chi^2$ indicates.
+
+\input{generated/fv_fit_results}
+
+Table~\ref{tab:fv-fits} summarizes the outcome.
+For the summed weight it is unambiguous.
+The series of Eq.~\eqref{eq:series} through third order describes all sizes from $N_s=6$ with $\chi^2/{\rm dof}=0.64/4$, and it predicts $W=0.6721706(12)$ at $N_s=24$, where we measure $0.672161(11)$.
+With fewer terms the series is not sufficient at this precision; through second order it is acceptable only from $N_{\min}=10$.
+Every alternative form is rejected for all $N_{\min}\le10$.
+The three-parameter series beginning at $1/N_s^2$ and the single power become acceptable only at $N_{\min}=12$, where few sizes remain, and their predictions at $N_s=24$ then miss the measured value by $12$ and $4$ times the combined uncertainty.
+The two-parameter series beginning at $1/N_s^2$ and the exponential forms are rejected for every $N_{\min}$.
+
+For the weighted gap, whose uncertainties are larger, the conclusion is the same but less sharp.
+The series of Eq.~\eqref{eq:series} through third order describes all sizes from $N_s=4$ with $\chi^2/{\rm dof}=0.07/5$, and through second order all sizes from $N_s=6$.
+None of the alternative forms describes all sizes.
+The exponential with the rate fixed to $M$ is rejected for every $N_{\min}$.
+The series beginning at $1/N_s^2$ and the exponential with a free rate become acceptable once the smallest lattices are dropped, at $N_{\min}=6$ for the three-parameter series and at $N_{\min}=8$ for the two-parameter series and the exponential; there the uncertainties on $\overline{\Delta}$ are too large to discriminate, although the predictions of these fits at $N_s=24$ all lie above the measured value, by one to two times the combined uncertainty.
+A single power is acceptable from $N_{\min}=6$, with $\beta=1.120(7)$; the exponent moves to $1.09(2)$ and $1.06(14)$ for $N_{\min}=8$ and $10$, as expected if it absorbs a $1/N_s^2$ term at small $N_s$.
+The same trend is seen without any fit in the effective exponent obtained from successive sizes, $\beta_{\rm eff}=\ln[\delta(N_s)/\delta(N_s')]/\ln(N_s'/N_s)$ with $\delta=|y_{\rm OBC}-y_\infty|$, which for $W$ decreases monotonically from $1.27$ for $N_s=4,6$ to $1.05$ for $N_s=18,24$.
+
+The bottom panel of Fig.~\ref{fig:fv_gaplo} displays the test graphically.
+It shows $N_s$ times the difference between the OBC result and the infinite-volume value as a function of $1/N_s$.
+A correction that begins at order $1/N_s$ extrapolates to the nonzero intercept $b$, while any faster fall-off must extrapolate to zero.
+The series that begin at $1/N_s^2$ bend away from the results at the largest sizes and miss the held-out point for $W$.
+
+As our result we quote, for each observable, the series of the form of Eq.~\eqref{eq:series} obtained by taking $N_{\min}$ as small as possible and then the lowest order that is acceptable:
+\begin{align}
+\label{eq:dbarfit}
+   \overline{\Delta}_{\rm OBC}-\overline{\Delta}_\infty &= -\frac{0.174(3)}{N_s}-\frac{0.09(2)}{N_s^2}-\frac{0.26(5)}{N_s^3},\\
+\label{eq:wfit}
+   W_{\rm OBC}-W_\infty &= \frac{0.15876(6)}{N_s}+\frac{0.1464(9)}{N_s^2}\nonumber\\
+   &\quad+\frac{0.243(3)}{N_s^3},
+\end{align}
+valid for $N_s\ge4$ and $N_s\ge6$, respectively.
+If $y_\infty$ is left free in these two fits instead of being constrained, the OBC results alone determine the limits and give
+\begin{equation}
+\label{eq:limitdiff}
+\begin{split}
+   \overline{\Delta}_\infty^{\rm OBC}-\overline{\Delta}_\infty^{\rm PBC} &= +0.0004(16),\\
+   W_\infty^{\rm OBC}-W_\infty^{\rm PBC} &= -0.00004(6).
+\end{split}
+\end{equation}
+Both differences are consistent with zero: the two boundary conditions agree in the infinite-volume limit at the level of $0.1\%$ for $\overline{\Delta}$ and $0.01\%$ for $W$.
+The fits with a free limit are listed for all forms in App.~\ref{app:dmrg}.
+
+Equation~\eqref{eq:dbarfit} makes the practical consequence explicit.
+With OBC the weighted gap is within $1\%$ of its infinite-volume value only for $N_s\ge14$, and $0.1\%$ would require $N_s\approx120$.
+With PBC it is within $0.16\%$ at $N_s=4$ and $0.002\%$ at $N_s=6$.
+
+\inlinesection{Origin of the $1/N_s$ correction.}
+The operator $\mathcal{O}$ acts with the same amplitude on every link, but an open chain is not uniform.
+This is visible in the occupation of the matter sites in the ground state, $\nu_n\equiv\tfrac12\left[1-(-1)^n\langle Z_n\rangle\right]$.
+At $N_s=24$ it equals $0.0635$ on every site with PBC.
+With OBC it is $0.0349$ on the two end sites, $0.0664$ and $0.0632$ on the next two, and equal to the PBC value farther in.
+The distortion is confined to about three sites at each end, a number that does not grow with $N_s$.
+The terms of Eq.~\eqref{eq:Odef} that act within these boundary layers contribute to the moments differently from those in the bulk, and they make up a fraction of order $1/N_s$ of all terms; both moments are therefore shifted by an amount proportional to $1/N_s$.
+In terms of the spectrum, the boundaries transfer weight from the zero-momentum meson at the top of the band to states lower in the band, which is why $\overline{\Delta}$ is smaller with OBC than with PBC.
+The same reasoning applies to any volume-averaged quantity.
+The mean occupation of the matter sites at $N_s=24$, for example, is lower with OBC than with PBC by $0.0022$, which is $0.052/N_s$.
+The exponentially small corrections that are the only ones present with PBC also occur with OBC, but they are negligible in comparison: even for the smallest gap in the spectrum, $1.287$, the factor $e^{-1.287N_s}$ is below $6\times10^{-3}$ at $N_s=4$ and below $10^{-4}$ at $N_s=8$.
+
+The $1/N_s$ correction is a property of volume-averaged quantities, not of every quantity that can be computed on an open chain.
+An individual energy level converges faster.
+The highest level of the OBC band, which carries about $80\%$ of the weight, lies below $\overline{\Delta}_\infty$ by an amount that is close to $0.39/N_s^2$ for $N_s\ge10$, and it is within $0.1\%$ of $\overline{\Delta}_\infty$ for $N_s\ge18$.
+This is still a power law, to be compared with $0.002\%$ at $N_s=6$ for PBC.
+Using that level, however, requires resolving it from its neighbors in the band, whose spacing also decreases as $1/N_s^2$.
+A correlation function of a volume-averaged operator followed over a time short compared with the inverse of that spacing oscillates at the weighted gap $\overline{\Delta}$, to which all states of the band contribute, and it is this quantity that inherits the $1/N_s$ correction.
 
 \subsection{SWAP cost}
 \label{sec:swap}
@@ -797,11 +862,14 @@ controlled test case.  Although OBC reduces the gate count at fixed
 $L$ by eliminating the periodic link, the larger finite-volume errors
 under OBC require correspondingly larger $L$ to reach a given target
 precision --- gains from the cheaper gate count can therefore be wiped
-out by the inflated volume.  We demonstrate this with DMRG calculations
-in which the OBC observable approaches its PBC value only as
-$\mathcal{O}(1/L)$, with the OBC$-$PBC asymptote
-$-0.001(13)_{\rm stat}(4)_{\rm sys}$ --- consistent with zero as
-required by bulk universality.  A direct PBC embedding via SWAP
+out by the inflated volume.  We demonstrate this with tensor-network
+calculations of the meson gap obtained from a volume-averaged operator.
+With PBC the gap is within $0.002\%$ of its infinite-volume value at
+$N_s=6$.  With OBC it approaches the same value only as $1/N_s$, so
+that $0.1\%$ accuracy would require $N_s\approx120$; the
+infinite-volume limits obtained with the two boundary conditions differ
+by $0.0004(16)$, consistent with zero.
+A direct PBC embedding via SWAP
 networks, on the other hand, costs $4L(L{-}1)\mathcal{F}$ per Trotter
 step in 2d and $6L^2(L{-}1)\mathcal{F}$ in 3d --- an $\mathcal{O}(L^d)$
 overhead that grows rapidly with dimension.  Both observations make
@@ -856,6 +924,50 @@ cost-versus-fidelity tradeoffs we have identified here.
 \begin{acknowledgments}
 The authors acknowledge the support by the Department of Energy through the Fermilab QuantiSED program under the grant ``Toward Lattice QCD on Quantum Computers". This work was produced by Fermi Forward Discovery Group, LLC under Contract No. 89243024CSC000002 with the U.S. Department of Energy, Office of Science, Office of High Energy Physics. 
 \end{acknowledgments}
+
+\appendix
+
+\section{Details of the tensor-network calculations}
+\label{app:dmrg}
+
+This appendix records how the results of Sec.~\ref{sec:mass_gap_L} were obtained.
+
+\inlinesection{States.}
+The eigenstates of $H+H_G$ are represented as matrix product states and computed with the \textsc{ITensor} library~\cite{Fishman:2020gel}.
+Each matter site and each link is one qubit, ordered along the chain; for PBC the link that closes the ring couples the two ends of this ordering.
+The ground state is found by DMRG.
+Excited states are found one after another by DMRG on $H+H_G$ with an added energy penalty of $200$ for overlap with each state already found.
+We compute the ground state and the lowest $30$ excited states for $N_s\le18$, and $40$ excited states for OBC at $N_s=16$ and for both boundary conditions at $N_s=24$.
+In every run the single-meson band, which contains $N_s$ states for PBC and $N_s-1$ for OBC, lies entirely within the computed states.
+
+\inlinesection{Convergence.}
+The truncation error at each bond is kept below $10^{-11}$ and the bond dimension is capped at $300$.
+Each state is started from a random matrix product state of bond dimension $10$.
+During the first sweeps a small random perturbation of the density matrix (the DMRG noise term), decreasing from $10^{-5}$ to zero, is applied to avoid trapping in a sector with static charges.
+Up to $640$ sweeps are performed per state, stopping early once the energy changes by less than $10^{-7}$ between successive blocks of ten sweeps.
+For $N_s\ge14$ the calculation was then continued from the saved states, without noise, in further stages of the same kind, up to a cumulative $5120$ sweeps.
+In the last stage $\overline{\Delta}$ changed by between $7\times10^{-4}$ and $4\times10^{-3}$ and $W$ by at most $2\times10^{-5}$; these changes are included in the uncertainties of Table~\ref{tab:fv-data}.
+For PBC at $N_s=24$ only the final stage is available.
+We use four random starting states for $N_s\le12$ and for OBC at $N_s=14$ and $18$, two for PBC at $N_s=14$, $16$, and $18$, and one for OBC at $N_s=16$ and for $N_s=24$.
+Results are averaged over starting states.
+Where there is a single starting state, the scatter among starting states is taken from the nearest smaller lattice, and where no earlier stage or second implementation is available the uncertainty on $W$ is not taken smaller than at the nearest smaller lattice.
+
+\inlinesection{Validation.}
+Exact diagonalization of $H+H_G$ at $N_s=4$ and $6$ reproduces the DMRG values of $\overline{\Delta}$ to $1.4\times10^{-7}$ and those of $W$ to $3.3\times10^{-7}$; the latter is used as the minimum uncertainty on $W$ at every size.
+A second, independently written implementation, run with four starting states for $N_s\le18$, provides the comparison quoted in Sec.~\ref{sec:mass_gap_L}.
+Its difference from the first enters the uncertainty on $W$.
+It does not enter the uncertainty on $\overline{\Delta}$, because for $N_s\ge14$ the second implementation is the less converged of the two and the difference measures its own error.
+
+\inlinesection{Fits with a free limit.}
+Table~\ref{tab:fv-grid} lists, for every functional form of Table~\ref{tab:fv-fits} and every $N_{\min}$, the fit in which the infinite-volume limit of the OBC results is a free parameter rather than constrained to the PBC value.
+The third-order series beginning at $1/N_s$ gives a limit consistent with PBC at every $N_{\min}$ at which it is acceptable.
+The first- and second-order series can have an acceptable $\chi^2$ at small $N_{\min}$ and yet a limit that differs from PBC by several times its uncertainty, for example for $\overline{\Delta}$ at second order with $N_{\min}=4$.
+The uncertainty of such a fit does not include the error made by truncating the series, which is why the fits of Sec.~\ref{sec:mass_gap_L} use the PBC value as a constraint and the result quoted there is the series of highest order.
+The forms without a $1/N_s$ term behave differently.
+For $W$, the series beginning at $1/N_s^2$ and the exponential, where acceptable, give limits that exceed the PBC value by $0.003$ to $0.006$, more than ten times their uncertainties.
+For $\overline{\Delta}$ their limits lie below the PBC value, and they become compatible with it only when the smallest lattices are dropped and the uncertainty of the extrapolation grows to several times $10^{-3}$.
+
+\input{generated/fv_fit_grid}
 
 \bibliography{ref3}% Produces the bibliography via BibTeX.
 
