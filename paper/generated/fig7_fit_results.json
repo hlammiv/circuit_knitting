@@ -1,37 +1,264 @@
 {
+  "bootstrap_convergence": {
+    "exact": {
+      "endpoint_mcse": [
+        0.00026130865664440283,
+        0.0002041706665738343
+      ],
+      "endpoint_mcse_fraction_of_interval_width": [
+        0.004610207871625092,
+        0.0036021355981120137
+      ],
+      "half_sample_endpoint_shift": [
+        0.00016797696864001566,
+        0.00017507196377786194
+      ],
+      "half_sample_shift_fraction_of_interval_width": [
+        0.0029635786009560394,
+        0.0030887539504973775
+      ],
+      "interval_68": [
+        1.9261182654732143,
+        1.982798715448736
+      ],
+      "median": 1.9551094585490267,
+      "samples": 10000,
+      "sufficient": true
+    },
+    "knitted": {
+      "endpoint_mcse": [
+        0.017731381468949776,
+        0.003945707048633703
+      ],
+      "endpoint_mcse_fraction_of_interval_width": [
+        0.018922942791134035,
+        0.004210861341098439
+      ],
+      "half_sample_endpoint_shift": [
+        0.008225919640338697,
+        0.01441865015597843
+      ],
+      "half_sample_shift_fraction_of_interval_width": [
+        0.008778707233340833,
+        0.015387593600912816
+      ],
+      "interval_68": [
+        1.3198882310187239,
+        2.2569190969185806
+      ],
+      "median": 1.8962093416929875,
+      "samples": 10000,
+      "sufficient": false
+    },
+    "no_knit": {
+      "endpoint_mcse": [
+        0.003488492456080001,
+        0.004888371321706561
+      ],
+      "endpoint_mcse_fraction_of_interval_width": [
+        0.004993746630952535,
+        0.006997661060172668
+      ],
+      "half_sample_endpoint_shift": [
+        0.007817188420113919,
+        0.0010140386060690787
+      ],
+      "half_sample_shift_fraction_of_interval_width": [
+        0.01119023728098606,
+        0.0014515874511603468
+      ],
+      "interval_68": [
+        2.1939052223077127,
+        2.892477399449705
+      ],
+      "median": 2.5713666386397867,
+      "samples": 10000,
+      "sufficient": true
+    }
+  },
   "bootstrap_samples_requested": 10000,
+  "bootstrap_workers": 4,
+  "frequency_difference_from_exact": {
+    "knitted": {
+      "interval_68": [
+        -0.6387356043491097,
+        0.3027444583499716
+      ],
+      "interval_95": [
+        -1.6750057208893814,
+        0.5605523620714886
+      ],
+      "median": -0.056176971679901655,
+      "probability_positive": 0.4459
+    },
+    "no_knit": {
+      "interval_68": [
+        0.23706935746288313,
+        0.9387982698668824
+      ],
+      "interval_95": [
+        -0.28549015204521605,
+        1.231805376940671
+      ],
+      "median": 0.6164197336720191,
+      "probability_positive": 0.9311
+    }
+  },
   "frequency_difference_knitted_minus_no_knit": {
     "interval_68": [
-      -1.3503293388851672,
-      -0.14580475833175846
+      -1.3389702174692828,
+      -0.15808803575456823
     ],
     "interval_95": [
-      -2.369971659158132,
-      0.42540610141597945
+      -2.3460087771607157,
+      0.40951809890151536
     ],
-    "median": -0.6869895462492932,
-    "probability_positive": 0.1008
+    "median": -0.6918371217851969,
+    "probability_positive": 0.0992
   },
   "primary_model": "truncated",
   "primary_rule": "Use damped only if its AICc is at least 6 lower for both series and its bootstrap failure and boundary fractions are each <= 5%; otherwise use truncated.",
   "random_seed": 20260819,
   "series": {
+    "exact": {
+      "damped": {
+        "aicc": 30.158604672230826,
+        "bootstrap_boundary_fraction": 0.4189,
+        "bootstrap_failures": 0,
+        "bootstrap_successes": 10000,
+        "chi2": 0.15860467223082614,
+        "chi2_per_dof": 0.039651168057706535,
+        "dof": 4,
+        "frequency_interval_68": [
+          1.1195273718951466,
+          1.9619115551010073
+        ],
+        "frequency_median": 1.8462335705038284,
+        "model": "damped",
+        "p_value": 0.9970169693081696,
+        "parameter_intervals_68": {
+          "amplitude": [
+            -0.09699749175909833,
+            -0.016141975474566445
+          ],
+          "damping": [
+            3.068474596466559e-17,
+            0.40098118990072534
+          ],
+          "frequency": [
+            1.1195273718951466,
+            1.9619115551010073
+          ],
+          "offset": [
+            0.5157654949586867,
+            0.5969224301871685
+          ],
+          "slope": [
+            -0.04630245908030163,
+            0.0005767599619873928
+          ]
+        },
+        "parameter_medians": {
+          "amplitude": -0.020950465124791325,
+          "damping": 0.09949790454401408,
+          "frequency": 1.8462335705038284,
+          "offset": 0.5208617166802817,
+          "slope": -0.0040505447503222745
+        },
+        "parameters": {
+          "amplitude": -0.02103867383877388,
+          "damping": 0.10269597235187787,
+          "frequency": 1.8427677458129614,
+          "offset": 0.5208139659915401,
+          "slope": -0.0035090344971700936
+        }
+      },
+      "truncated": {
+        "aicc": 11.045367707497622,
+        "bootstrap_boundary_fraction": 0.0,
+        "bootstrap_failures": 0,
+        "bootstrap_successes": 10000,
+        "chi2": 0.24536770749762105,
+        "chi2_per_dof": 0.04089461791627017,
+        "dof": 6,
+        "frequency_interval_68": [
+          1.9261182654732143,
+          1.982798715448736
+        ],
+        "frequency_median": 1.9551094585490267,
+        "model": "truncated",
+        "p_value": 0.9997192151398689,
+        "parameter_intervals_68": {
+          "amplitude": [
+            -0.01671463675019479,
+            -0.016293244334570245
+          ],
+          "frequency": [
+            1.9261182654732143,
+            1.982798715448736
+          ],
+          "offset": [
+            0.5159652970883242,
+            0.5164605225130433
+          ]
+        },
+        "parameter_medians": {
+          "amplitude": -0.016502214415455574,
+          "frequency": 1.9551094585490267,
+          "offset": 0.5162106352346394
+        },
+        "parameters": {
+          "amplitude": -0.01649466160411691,
+          "frequency": 1.9550379614548516,
+          "offset": 0.5162023715271736
+        }
+      }
+    },
     "knitted": {
       "damped": {
         "aicc": 30.945607935848354,
-        "bootstrap_boundary_fraction": 0.7001,
+        "bootstrap_boundary_fraction": 0.7005,
         "bootstrap_failures": 0,
         "bootstrap_successes": 10000,
         "chi2": 0.9456079358483536,
         "chi2_per_dof": 0.2364019839620884,
         "dof": 4,
         "frequency_interval_68": [
-          4.817029604403313,
-          6.289721896453641
+          4.836815469327929,
+          6.28205585007106
         ],
-        "frequency_median": 5.5668340340557965,
+        "frequency_median": 5.578099390157023,
         "model": "damped",
         "p_value": 0.9179283671304078,
+        "parameter_intervals_68": {
+          "amplitude": [
+            0.005293859986026972,
+            0.015735392833094452
+          ],
+          "damping": [
+            1.1863915125803653e-29,
+            0.49553657721525163
+          ],
+          "frequency": [
+            4.836815469327929,
+            6.28205585007106
+          ],
+          "offset": [
+            0.48192804593134014,
+            0.4931956238727704
+          ],
+          "slope": [
+            0.029131586636352885,
+            0.042048081572532925
+          ]
+        },
+        "parameter_medians": {
+          "amplitude": 0.009768095810487494,
+          "damping": 4.880748183694098e-13,
+          "frequency": 5.578099390157023,
+          "offset": 0.48772575909349114,
+          "slope": 0.03537815547280952
+        },
         "parameters": {
           "amplitude": 0.007095142989771555,
           "damping": 2.364444082194545e-22,
@@ -42,19 +269,38 @@
       },
       "truncated": {
         "aicc": 12.844129736777596,
-        "bootstrap_boundary_fraction": 0.0491,
+        "bootstrap_boundary_fraction": 0.0461,
         "bootstrap_failures": 0,
         "bootstrap_successes": 10000,
         "chi2": 2.0441297367775975,
         "chi2_per_dof": 0.3406882894629329,
         "dof": 6,
         "frequency_interval_68": [
-          1.3021153744872762,
-          2.2531930501427277
+          1.3198882310187239,
+          2.2569190969185806
         ],
-        "frequency_median": 1.9023675813616745,
+        "frequency_median": 1.8962093416929875,
         "model": "truncated",
         "p_value": 0.9155955520064225,
+        "parameter_intervals_68": {
+          "amplitude": [
+            -0.03411006126238095,
+            -0.019681972372523577
+          ],
+          "frequency": [
+            1.3198882310187239,
+            2.2569190969185806
+          ],
+          "offset": [
+            0.5142267801996142,
+            0.5295855975567842
+          ]
+        },
+        "parameter_medians": {
+          "amplitude": -0.024270755528348877,
+          "frequency": 1.8962093416929875,
+          "offset": 0.5185509327779976
+        },
         "parameters": {
           "amplitude": -0.022541944300491373,
           "frequency": 1.8978226461484327,
@@ -65,19 +311,48 @@
     "no_knit": {
       "damped": {
         "aicc": 32.51455266132552,
-        "bootstrap_boundary_fraction": 0.8911,
+        "bootstrap_boundary_fraction": 0.8864,
         "bootstrap_failures": 0,
         "bootstrap_successes": 10000,
         "chi2": 2.514552661325518,
         "chi2_per_dof": 0.6286381653313795,
         "dof": 4,
         "frequency_interval_68": [
-          0.5051386613999702,
-          2.1809564582913885
+          0.5140435298353507,
+          2.2297811830621366
         ],
-        "frequency_median": 0.8517146530595767,
+        "frequency_median": 0.8480727694494166,
         "model": "damped",
         "p_value": 0.6420318232499258,
+        "parameter_intervals_68": {
+          "amplitude": [
+            -0.5070057810027966,
+            -0.03243171717888009
+          ],
+          "damping": [
+            0.27332801694860465,
+            0.5766220319856299
+          ],
+          "frequency": [
+            0.5140435298353507,
+            2.2297811830621366
+          ],
+          "offset": [
+            0.52948057284716,
+            0.9999999999999999
+          ],
+          "slope": [
+            -0.29170357420636844,
+            0.011375557896052173
+          ]
+        },
+        "parameter_medians": {
+          "amplitude": -0.499825120449404,
+          "damping": 0.4934923689752213,
+          "frequency": 0.8480727694494166,
+          "offset": 0.9999999999961176,
+          "slope": -0.21878649962402788
+        },
         "parameters": {
           "amplitude": -0.5027540267370315,
           "damping": 0.49824485944365976,
@@ -88,19 +363,38 @@
       },
       "truncated": {
         "aicc": 13.499514660010632,
-        "bootstrap_boundary_fraction": 0.0018,
+        "bootstrap_boundary_fraction": 0.0013,
         "bootstrap_failures": 0,
         "bootstrap_successes": 10000,
         "chi2": 2.699514660010632,
         "chi2_per_dof": 0.44991911000177204,
         "dof": 6,
         "frequency_interval_68": [
-          2.192930268768564,
-          2.8834450205267883
+          2.1939052223077127,
+          2.892477399449705
         ],
-        "frequency_median": 2.5653503687933013,
+        "frequency_median": 2.5713666386397867,
         "model": "truncated",
         "p_value": 0.8455046232668989,
+        "parameter_intervals_68": {
+          "amplitude": [
+            -0.026964769202817908,
+            -0.017895892527747835
+          ],
+          "frequency": [
+            2.1939052223077127,
+            2.892477399449705
+          ],
+          "offset": [
+            0.5175202722255996,
+            0.5255929036610641
+          ]
+        },
+        "parameter_medians": {
+          "amplitude": -0.022388602130140774,
+          "frequency": 2.5713666386397867,
+          "offset": 0.521089726941392
+        },
         "parameters": {
           "amplitude": -0.02147891682827887,
           "frequency": 2.567020241429884,

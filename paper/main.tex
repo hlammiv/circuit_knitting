@@ -18,7 +18,6 @@
 \usepackage[normalem]{ulem}
 \usepackage{bbm}
 \usepackage{qcircuit}
-\usepackage{todonotes}
 \usepackage[colorlinks=true,backref=false, linktocpage=true,
 citecolor=blue,urlcolor=blue,linkcolor=blue,pdfpagemode=UseOutlines]{hyperref}
 \hypersetup{%
@@ -37,7 +36,6 @@ citecolor=blue,urlcolor=blue,linkcolor=blue,pdfpagemode=UseOutlines]{hyperref}
  \left. #2 \vphantom{#1} \right>} % for Dirac brackets
 \newcommand{\mbraket}[3]{\left< #1 \vphantom{#2#3} \right|
  #2 \left| #3 \vphantom{#1#2} \right>} % for Dirac matrix elements
-\newcommand{\itodo}[1]{\todo[inline]{#1}}
 %\newcommand{\mike}[1]{{\color{orange}Mike: #1}}
 %\newcommand{\hank}[1]{{ \color{cyan}[{\bf Hank: #1}]\color{black}}}
 %\newcommand{\ruth}[1]{{ \color{violet}[{\bf Ruth: #1}]\color{black}}}
@@ -68,9 +66,6 @@ Batavia, IL 60510, USA}}
 
 \begin{document}
 \preprint{FERMILAB-PUB-XX-XXX-T}
-\listoftodos
-
-
 \title{Periodic Boundary Conditions for Lattice Field Theories with Circuit Knitting}
 
 %%%% ADD YOURSELF TO AUTHOR LIST :D %%%%
@@ -121,7 +116,7 @@ Extracting physical point predictions from quantum simulations of lattice gauge 
 
 \section{Introduction}
 
-Quantum simulation has the potential to become a powerful tool for investigating time-dependent phenomena in quantum field theories~\cite{Cloet:2019wre,Banuls:2019bmf,Bauer:2022hpo,Fang:2024ple}. Unlike classical computation, which quickly become intractable as system size grows, quantum computers are in principle well-suited to capture the full nonperturbative dynamics of these theories~\cite{Jordan:2011ne,Zohar:2012ay,Lamm:2019uyc,Ikeda:2020agk,Gustafson:2021imb,Cohen:2021imf,Barata:2022wim,Li:2022lyt,Carrillo:2024chu,Grieninger:2024axp,Barata:2024bzk,Farrell:2024fit,Li:2024nod,Farrell:2024mgu,Carena:2024peb,Chernyshev:2025lil,Shao:2025ygy}.
+Quantum simulation has the potential to become a powerful tool for investigating time-dependent phenomena in quantum field theories~\cite{Cloet:2019wre,Banuls:2019bmf,Bauer:2022hpo,Fang:2024ple}. Unlike classical computation, which quickly become intractable as system size grows, quantum computers are in principle well-suited to capture the full nonperturbative dynamics of these theories~\cite{Jordan:2011ne,Zohar:2012ay,Lamm:2019uyc,Ikeda:2020agk,Gustafson:2021imb,Cohen:2021imf,Barata:2022wim,Li:2022lyt,Carrillo:2024chu,Grieninger:2024axp,Barata:2024bzk,Farrell:2024fit,Li:2024nod,Farrell:2024mgu,Carena:2024peb,Chernyshev:2025lil,Shao:2025ygy,Andrade:2026lgt,Sukeno:2026mbqs}.
 
 As with classical lattice field theory, finite quantum simulations require regulation. Discretizing spacetime onto a lattice provides such a framework, but simulations at finite resources inevitably differ from the physical point. Systematic errors arise from sources such as finite spatial volume, nonzero lattice spacing, digitization of gauge field~\cite{Ciavarella:2025tdl}, approximating of the time-evolution operator~\cite{Kane:2025ybw}, and the use of unphysical masses. To make physical predictions, one must extrapolate results to the continuum, infinite-volume~\cite{Burbano:2025pef}, and physical-mass limits. The computational cost of a full simulation is therefore determined not only by the resources needed for an individual lattice but also by the ensemble of simulations required to perform these extrapolations.
 
@@ -129,7 +124,7 @@ Among these extrapolations, reaching the infinite-volume limit is a critical ste
 
 From a hardware perspective, however, PBCs present a challenge. While they capture the desired physics, they introduce long-range interactions across the lattice. Quantum devices are generally restricted to one- or two-dimensional layouts with only local connectivity. Implementing periodicity therefore requires routing quantum information across the processor using a network of SWAP gates. The overhead from such SWAP networks can dominate the cost of a simulation~\cite{brierley2016efficientimplementationquantumcircuits,Zhu:2025upm,Parella-Dilme:2025yan} and can be particularly expensive when fermions are involved~\cite{PhysRevLett.120.110501}. For this reason, most quantum field theory simulations performed to date have adopted OBCs, which, while incurring larger finite-volume corrections, avoid the nonlocality problem and are more amenable to current hardware constraints.
 
-Recently, alternative strategies have been proposed to mitigate this difficulty. One such approach, known as circuit knitting~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}, replaces a single quantum circuit containing nonlocal entangling gates with an ensemble of circuits that involve only local gates and measurements. Classical post-processing is then used to reconstruct observables of the original circuit. In addition to reducing connectivity, the replacement of entangling gates by single-qubit ones can lead to a reduction in errors~\cite{Yamamoto:2022yfd}. While circuit knitting can significantly reduce the quantum overhead associated with nonlocal interactions, it introduces an exponential classical overhead in the worst case and can suffer from degraded signal-to-noise ratios. Experimental demonstrations of circuit knitting have been performed~\cite{Singh:2023uhr}, and on-going research seeks to reduce the high costs~\cite{Perlin:2021,Chen:2022mgb,Lowe2023fastquantumcircuit,Lian:2023,Yang:2024jvu,10.1145/3579371.3589352,Piveteau:2025pso}.
+Recently, alternative strategies have been proposed to mitigate this difficulty. One such approach, known as circuit knitting~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}, replaces a single quantum circuit containing nonlocal entangling gates with an ensemble of circuits that involve only local gates and measurements. Classical post-processing is then used to reconstruct observables of the original circuit. In addition to reducing connectivity, the replacement of entangling gates by single-qubit ones can lead to a reduction in errors~\cite{Yamamoto:2022yfd}. While circuit knitting can reduce quantum connectivity requirements, it introduces an exponential sampling and circuit-execution overhead in the number of cuts, together with additional classical reconstruction costs, and can suffer from degraded signal-to-noise ratios. Experimental demonstrations of circuit knitting have been performed~\cite{Singh:2023uhr}, and on-going research seeks to reduce the high costs and optimize cut placement~\cite{Perlin:2021,Chen:2022mgb,Lowe2023fastquantumcircuit,Lian:2023,Yang:2024jvu,10.1145/3579371.3589352,Piveteau:2025pso,Idan:2026cutting}.
 
 In this work, we investigate the relative merits of three different methods for approaching the infinite-volume limit in quantum simulations, using the lattice $\mathbb{Z}_2$ gauge theory model as a test case: open boundary conditions, periodic boundary conditions implemented with SWAP networks, and periodic boundary conditions implemented with circuit knitting.
 
@@ -447,11 +442,17 @@ networks and their optimized variants for restricted hardware
 connectivity~\cite{Kivlichan:2017ngt,Hashim:2021loh}, together with
 general routing strategies for limited-connectivity
 devices~\cite{Cowtan:2019jqo}, provide the techniques applied to LGT
-routing.  Here we record the counts that follow from a direct embedding
-of a PBC LGT on a 2d nearest-neighbor processor, with $\mathcal{F}$ the
+routing.  Here we first record the counts that follow from a direct embedding
+of a PBC LGT on a 2d square nearest-neighbor processor, with $\mathcal{F}$ the
 per-link overhead (physical qubits per logical site); these should be
 read as upper bounds, since more elaborate scheduling within the cited
-techniques can lower the prefactor without changing the $L$-scaling.
+techniques can lower the prefactor without changing the $L$-scaling.  This
+square-grid assumption is also relevant to IBM's Nighthawk generation, which
+uses degree-four square-lattice connectivity~\cite{ibm-processor-types}.  By
+contrast, the Eagle-generation \washington{} model used in
+Sec.~\ref{sec:numresults} and the Heron r2/r3 processors use heavy-hex
+connectivity, for which the finite-$L$ routing prefactor is architecture and
+compiler dependent.
 
 For the 2d case with PBC mapped onto a 2d square processor, each of the
 $L$ periodic links per direction requires $(L-1)$ SWAPs to bring
@@ -462,6 +463,34 @@ Trotter step is
 \begin{equation}
 N_{\text{SWAP}}^{(2\text{d})} = 4L(L-1)\mathcal{F}.
 \end{equation}
+For a heavy-hex processor, the square-grid distance $L-1$ must be replaced by
+graph distances in the chosen physical-qubit layout.  If
+$\overline d_x(L)$ and $\overline d_y(L)$ are the average shortest-path
+distances between the embedded qubits joined by periodic links in the two
+directions, we define the following direct-routing bookkeeping estimate; it
+is not an optimized routing bound:
+\begin{equation}
+N_{\text{SWAP}}^{(2\text{d},\,\mathrm{hh})}
+\simeq 2L\left[\overline d_x(L)+\overline d_y(L)-2\right]\mathcal{F}
++N_{\mathrm{bulk}}^{(\mathrm{hh})}.
+\end{equation}
+The factor of two again accounts for forward and return routing.
+$N_{\mathrm{bulk}}^{(\mathrm{hh})}$ denotes routing needed even away from the
+periodic boundary: the square-lattice interaction graph has degree-four
+vertices, whereas heavy-hex hardware has degree at most three and therefore
+does not natively embed every square-lattice nearest-neighbor interaction.
+Square-lattice connectivity can nevertheless be emulated on heavy-hex with
+constant local routing overhead~\cite{ibm-heavy-hex}; comparative compilation
+studies likewise find topology-dependent communication overheads for
+heavy-hex and square processors~\cite{Rached:2024routing}.
+For a local layout, $\overline d_{x,y}(L)=\mathcal{O}(L)$ and
+$N_{\mathrm{bulk}}^{(\mathrm{hh})}=\mathcal{O}(L^2\mathcal{F})$.  Heavy-hex
+therefore preserves the $\mathcal{O}(L^2)$ scaling in 2d but generally changes
+the finite-size prefactor.  In 1d a path can be embedded natively, so the
+leading distinction is instead the graph distance required to close the
+single periodic edge, as seen in the Washington compilation results of
+Table~\ref{tab:fig7-data}.
+
 For the 3d case mapped onto the same 2d processor by laying the $L$
 2d layers side-by-side along one processor direction (each layer
 occupying an $L\!\times\!L$ patch), the per-step cost is the sum of
@@ -470,23 +499,27 @@ $2L^{2}(L-1)\mathcal{F}$ inter-layer SWAPs,
 \begin{equation}
 N_{\text{SWAP}}^{(3\text{d})} = 6L^{2}(L-1)\mathcal{F}.
 \end{equation}
-In general, a $d$-dimensional LGT mapped this way requires
-$\mathcal{O}(L^d)$ SWAP gates to implement periodic boundary conditions,
-and the SWAP network's share of the total cost grows with dimension.
+In general, a $d$-dimensional LGT mapped onto either local architecture in
+this way requires $\mathcal{O}(L^d)$ SWAP gates per Trotter step.  The square
+and heavy-hex layouts share this volume scaling, while their coordination
+numbers, graph distances, and available embeddings determine different
+prefactors.  Nighthawk's square lattice more closely realizes the assumptions
+behind the explicit counts above, while heavy-hex estimates should be obtained
+from a specified layout or transpilation rather than by assigning a universal
+replacement prefactor.
 
 These estimates further assume nearest-neighbor interactions, an
 optimistic ansatz: improved LGT
 Hamiltonians~\cite{Carena:2022kpg,Gustafson:2023aai,Ciavarella:2023mfc,Illa:2025dou,Illa:2025njz}
 and domain-wall or overlap fermions for chiral gauge
-theories~\cite{Clancy:2023kla,Singh:2025sye} both require beyond
+theories~\cite{Clancy:2023kla,Singh:2025sye,Lamm:2026qsp} both require beyond
 nearest-neighbor couplings.
 
 
 \section{Basics of circuit knitting}
 \label{sec:knitting}
 Circuit knitting is a hybrid quantum–classical technique that enables non-local gates to be simulated by sampling a set of local
-operations with a quasi-probability distribution~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}. Each subcircuit can be run independently on a quantum processor with reduced connectivity, and the results are then “knitted” back together using classical post-processing methods. The required operations are projective measurement of a qubit in Pauli basis, and single qubit rotations. The required number of samples for a given expectation value depends upon what entangling gate is cut.  In the case of controlled Paulis e.g. the CNOT considered in this work, the sampling overhead for an error $\epsilon$ is roughly $O(9^k/\epsilon^2)$, where $k$ is
-the number of cuts performed.
+operations with a quasi-probability distribution~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}. Each subcircuit can be run independently on a quantum processor with reduced connectivity, and the results are then “knitted” back together using classical post-processing methods. The required operations are projective measurement of a qubit in Pauli basis, and single qubit rotations. The decomposition used here contains six terms per cut CNOT, producing $6^k$ subcircuits for $k$ independently cut CNOTs. Separately, the quasiprobability estimator has a sampling overhead of approximately $\mathcal{O}(9^k/\delta^2)$ to obtain an expectation value with statistical error $\delta$.
 
 In~\cite{Mitarai:2019vae}, they demonstrate how to decompose the CZ gate into single-qubit rotations and projective measurements. This result can be applied to the CNOT simply by applying two Hadamards. Alternatively, using the exponential form 
 \begin{equation}
@@ -510,7 +543,7 @@ We find this to be well approximated by a function of the form
 \begin{equation}\label{eq:full_fit}
     \mathfrak{C}(t) = A\, e^{-B\,t}\, \cos{\left(C\,t\right)}+D+E\,t.
 \end{equation}
-The period of the oscillation is inversely proportional to the mass; see fig.~\ref{fig:mass_scan}
+The period of the oscillation is inversely proportional to the mass; see Fig.~\ref{fig:mass_scan}
 In order to accurately extract the mass, we must probe as much of a complete oscillatory period as possible and anticipate needing at least a quarter of a cycle.
 This implies the use of larger masses.
 However, following the results of ref.~\cite{Charles:2023zbl} (see specifically table~III), we do not increase the mass arbitrarily high as this leads to a worse fit, as noted in the reference, perhaps due to couplings to other excited states.
@@ -519,8 +552,8 @@ However, following the results of ref.~\cite{Charles:2023zbl} (see specifically 
     \includegraphics[width=0.48\textwidth]{figures/mass_scan.pdf}
     \caption{
     Mean fermion number from Trotter evolution time $t=0$ to $t=6.4$ for masses $m=1,\, 1.125,\ 1.25$ with a Trotter step of $\epsilon=0.05$.
-    Points represent $1024^{2}$ shots with statistical errors smaller than marker size.
-    Lines represent fits of points to eq.~(\ref{eq:full_fit}).
+    Points represent $N_{\mathrm{shots}}=1024^{2}$ with statistical errors smaller than marker size.
+    Lines represent fits of points to Eq.~(\ref{eq:full_fit}).
     }
 \label{fig:mass_scan}
 \end{figure}
@@ -532,14 +565,15 @@ As we here do not probe multiple periods of the evolution, we fit to a simplifie
 \begin{equation}\label{eq:trunc_fit}
     \mathfrak{C}(t) = A \, \cos{\left(C\, t\right)} + D.
 \end{equation}
-We display the results in fig.~\ref{fig:trotter_vs_exact} and summarize the extraction of the mass parameter $C$ in table~\ref{tab:mass_extraction}.
+We display the results in Fig.~\ref{fig:trotter_vs_exact} and summarize the extraction of the mass parameter $C$ in table~\ref{tab:mass_extraction}.
 \begin{figure}[ht]
     \includegraphics[width=0.48\textwidth]{figures/trotter_vs_exact.pdf}
     \caption{
     Mean fermion number from Trotter evolution time $t=0$ to $t=1.6$.
-    Points represent $1024^{2}$ shots with statistical errors smaller than marker size.
-    Orange circle, square and star markers represent the 0th, 1st and 2nd Trotter steps.
-    Lines represent fits to eq.~(\ref{eq:trunc_fit}).
+    Blue circles show the fixed-$\epsilon$ data and orange squares show the variable-step data.
+    Points represent $N_{\mathrm{shots}}=1024^{2}$ with statistical errors smaller than marker size.
+    Soft dashed lines separate the regions with zero, one, and two Trotter steps, labeled by $N_t$.
+    Lines represent fits to Eq.~(\ref{eq:trunc_fit}).
     }
 \label{fig:trotter_vs_exact}
 \end{figure}
@@ -557,13 +591,40 @@ We display the results in fig.~\ref{fig:trotter_vs_exact} and summarize the extr
 \caption{
    Mass parameter extraction for $M=1.125$.
    $33$ points corresponds to fitting multiple oscillatory periods from time $t=0$ to $t=6.4$; 9 points corresponds to fitting from time $t=0$ to $t=1.6$.
-   Full fit corresponds to the oscillatory Ansatz of eq.~(\ref{eq:full_fit}) while truncated (``trunc.'') fit corresponds to that of eq.~(\ref{eq:trunc_fit}).
+   Full fit corresponds to the oscillatory Ansatz of Eq.~(\ref{eq:full_fit}) while truncated (``trunc.'') fit corresponds to that of Eq.~(\ref{eq:trunc_fit}).
    Variable (``var.'') step size varying the Trotter step size between 0.2 and 0.8 for 1 or two steps as described in the text.
 }
 \label{tab:mass_extraction}
 \end{table}
 
-\subsection{Noiseless}
+\subsection{Noisy circuit-knitting comparison}
+
+All noisy results in this subsection are local simulations using the noise
+properties and device topology encoded in
+\textsc{Qiskit's} \texttt{FakeWashingtonV2} representation of the 127-qubit
+\washington{} backend.  Circuits were transpiled at optimization level one
+against the same backend model.  Thus ``noisy'' refers to simulation with the
+Washington calibration-derived device model, not execution on the physical
+device.
+
+The \washington{} calibration is an Eagle r1-era benchmark and should not be
+interpreted as the absolute noise level of current IBM hardware.  Washington
+contained 127 qubits on a heavy-hex lattice.  Heron r1 increased this to 133
+qubits, and Heron r2/r3 to 156 qubits, while retaining heavy-hex connectivity
+and introducing fixed-frequency qubits with tunable
+couplers~\cite{ibm-processor-types}.  IBM reported a
+three- to five-fold device-performance improvement for Heron r1 over its
+flagship Eagle processors, largely through improved two-qubit control and
+suppressed crosstalk~\cite{ibm-heron-system-two}; a late-2025 Heron r3 system
+reported a best error per layered gate (EPLG) of approximately
+$0.23\%$~\cite{ibm-q4-2025}.  The Washington model therefore remains useful
+for a controlled comparison of knitting with and without a heavy-hex routing
+constraint, but likely overstates the absolute noise expected from current
+Heron hardware.  Nighthawk changes the connectivity comparison more
+fundamentally: its degree-four square lattice is closer to the architecture
+assumed in Sec.~\ref{sec:swap} and should reduce routing relative to heavy-hex,
+potentially decreasing the hardware-level advantage obtained by cutting a
+periodic edge~\cite{ibm-processor-types}.
 
 % \begin{figure}
 %     \includegraphics[width=0.48\textwidth]{figures/noiseless_convergence.pdf}
@@ -580,7 +641,7 @@ We display the results in fig.~\ref{fig:trotter_vs_exact} and summarize the extr
 %     \includegraphics[width=0.48\textwidth]{figures/noisy_convergence.pdf}
 %     \caption{
 %         Plot of the mean fermion number for 1 and 2 Trotter evolution steps (blue and orange points, respectively) in a noisy simulation with a spacing of $\epsilon=0.8$.
-%         We observe that in the presence of noise neither the non-knitted results (circular markers) nor the knitted results (square markers) converge to the exact results (dotted lines and error bands taken from the highest statistics non-knitted points of fig.~\ref{fig:noisy_convergence}).
+%         We observe that in the presence of noise neither the non-knitted results (circular markers) nor the knitted results (square markers) converge to the exact results (dotted lines and error bands taken from the highest statistics non-knitted points of Fig.~\ref{fig:noisy_convergence}).
 %     }
 % \end{figure}
 
@@ -589,23 +650,76 @@ We display the results in fig.~\ref{fig:trotter_vs_exact} and summarize the extr
     \includegraphics[width=0.98\textwidth]{figures/fermion_number_with_vs_without_knitting_scatter.pdf}
     \caption{Time evolution of the mean fermion number without (blue) and
     with (orange) circuit knitting.  Points and error bars are the resampled
-    central values and one-standard-deviation uncertainties; circles, squares,
-    and triangles denote zero, one, and two Trotter steps, respectively.  The
-    black curve is the exact noiseless result.  Colored curves and bands show
+    central values and one-standard-deviation uncertainties; circles denote
+    results without knitting and squares denote results with knitting. Soft dashed lines
+    separate the regions with zero, one, and two Trotter steps, labeled by $N_t$. The
+    black curve is the noiseless fixed-step result at $\epsilon=0.05$.  Colored curves and bands show
     the primary weighted fits and their 68\% parametric-bootstrap intervals.}
     \label{fig:knitting-time-evolution}
 \end{figure*}
 
-We fit the nine noisy points in each data set to both
+\input{generated/fig7_data_table}
+
+The compiled CNOT counts in Table~\ref{tab:fig7-data} also quantify the
+routing benefit of cutting the periodic link on the Washington heavy-hex
+topology.  For the fixed transpiler seed used in our reproducible reference
+compilation, the one-step circuit decreases from 50 CNOTs without knitting to
+39 CNOTs per knitted term, a 22\% reduction.  Only two of the eleven removed
+CNOTs are the explicitly cut gates; the other nine arise from avoided
+routing.  At two steps the corresponding counts are 104 and 76, a 27\%
+reduction, of which four are cut gates and 24 are avoided routing CNOTs.  The
+absolute routing saving therefore grows approximately with $N_t$, although
+the ranges in Table~\ref{tab:fig7-data} show that its precise value depends on
+the transpiler layout and seed.  These Washington-specific compiled counts
+are distinct from the idealized square-lattice SWAP-network estimates in
+Sec.~\ref{sec:swap}.
+
+Fig.~\ref{fig:knitting-time-evolution} compares the noisy simulations with
+and without circuit knitting against a noiseless fixed-step reference at
+$\epsilon=0.05$.  This reference is itself a finite-Trotter, finite-shot
+simulation rather than exact Hamiltonian evolution.  The fitted colored data
+add the device-derived noise model and finite-shot fluctuations.
+If noisy CNOTs dominate the uncertainty, the smaller CNOT count in each
+knitted term should reduce the device-noise contribution to the scatter and
+can therefore narrow the associated error bars.  This benefit competes with
+the variance amplification of the quasiprobability reconstruction and its
+finite sampling.  Consequently, fewer compiled CNOTs do not by themselves
+guarantee smaller total knitted error bars.
+
+We fit the same nine time points in each series to both
 Eqs.~(\ref{eq:trunc_fit}) and~(\ref{eq:full_fit}), using the resampling
-uncertainties as absolute weights.  The five-parameter form is not supported
-by this short time range: its AICc values are 32.51 without knitting and 30.95
-with knitting, compared with 13.50 and 12.84 for the truncated cosine.  In
-addition, 89\% and 70\% of its bootstrap fits, respectively, place at least
-one parameter on a fit boundary.  We therefore use the truncated cosine as
-the primary model.
+uncertainties as independent absolute weights.  For the truncated model,
+$A$ is the oscillation amplitude, $C$ is the frequency used as the effective
+mass estimator, and $D$ is the mean offset over the fitted window.  Parameter
+uncertainties and differences are obtained from 10,000 parametric-bootstrap
+replicas, in which each time point is independently drawn from a Gaussian
+with its measured central value and resampling uncertainty.  We also fit the
+noiseless fixed-step reference only at these nine times so that comparisons
+use the same limited temporal window rather than a more strongly constrained
+long-time fit.
+
+The five-parameter form is not supported by this short time range: it
+has substantially larger AICc values than the truncated cosine and frequently
+places at least one parameter on a fit boundary.  We therefore use the
+truncated cosine as the primary model.  Table~\ref{tab:fig7-fits} reports all
+three primary-fit parameters; the uncertainty on $C$ is emphasized because it
+is the parameter relevant to the mass comparison.
 
 \input{generated/fig7_fit_results}
+
+Relative to the matched noiseless fixed-step reference in
+Table~\ref{tab:fig7-fits}, neither the knitted nor the un-knitted frequency
+shift is resolved at 95\% confidence.
+
+The knitted frequency interval is more asymmetric because the knitted data do
+not show a clear turnover within the fitted time range and have larger
+late-time uncertainties.  Bootstrap fluctuations can therefore place the
+maximum beyond the final time point, producing a long low-frequency tail.  In
+contrast, the un-knitted data turn over near $t\simeq1.2$, constraining both
+sides of the frequency distribution.  Correspondingly, 4.61\% of the knitted
+bootstrap fits approach a parameter bound, compared with 0.13\% without
+knitting.  This asymmetry is induced by the short-window nonlinear fit, not by
+asymmetric pointwise measurement errors.
 
 The 95\% bootstrap interval for the frequency difference is
 $-2.370 < \Delta C < 0.425$.  Thus the central values suggest a lower
@@ -630,20 +744,24 @@ required by bulk universality.  A direct PBC embedding via SWAP
 networks, on the other hand, costs $4L(L{-}1)\mathcal{F}$ per Trotter
 step in 2d and $6L^2(L{-}1)\mathcal{F}$ in 3d --- an $\mathcal{O}(L^d)$
 overhead that grows rapidly with dimension.  Both observations make
-the potentially exponential classical cost of circuit knitting
+the potentially exponential circuit-execution and sampling cost of circuit knitting
 attractive in regimes where the cut count $k$ remains modest.
 
 To probe the realistic cost-vs-fidelity tradeoff of circuit knitting in
 this setting, we performed both noiseless and noisy \textsc{Qiskit}
 simulations at $L=4$, cutting the two CNOTs that close the periodic
 boundary in $\mathcal{U}_3$.  The knitted circuits reproduce the
-mean-fermion-number evolution through two full Trotter steps at $1024^2$
-shots per sub-circuit.  The primary noisy-data fits give a
+mean-fermion-number evolution through two full Trotter steps using
+$N_{\mathrm{shots}}=16{,}384$ per sub-circuit for each of ten seeds.  The primary noisy-data fits give a
 knitted-minus-un-knitted frequency difference whose 95\% bootstrap interval
 includes zero (Tab.~\ref{tab:fig7-fits}); the current statistics therefore do
-not resolve a knitting-induced shift.  The $\mathcal{O}(9^k/\epsilon^2)$
-classical sampling overhead from $k$ knitted CNOTs ruled out a third
-Trotter step within our compute budget and is the dominant practical
+not resolve a knitting-induced shift.  In our exhaustive implementation,
+$k$ cut CNOTs produce $6^k$ decomposition terms.  At fixed shots per term,
+this growth ruled out a third Trotter step within our computational budget:
+three layers require $k=6$, corresponding to $6^6=46{,}656$ subcircuits per
+seed.  More generally, maintaining a fixed statistical precision $\delta$
+incurs a quasiprobability sampling overhead of approximately
+$\mathcal{O}(9^k/\delta^2)$.  This exponential growth is the dominant practical
 bottleneck of the technique --- its mitigation is therefore a
 prerequisite for scaling these studies to larger systems.  The recent
 integration of circuit knitting into the \textsc{Qiskit} addon
@@ -659,7 +777,7 @@ per-cut sampling cost grows in concert.  Reducing this sampling
 overhead is the central open problem.  Joint-cut decompositions for
 multiple two-qubit gates strictly outperform $k$ independent
 cuts~\cite{Schmitt:2023urx}, classical communication between
-sub-circuits lowers the parallel wire-cut overhead from
+sub-circuits lowers the optimal asymptotic sampling overhead for $n$ parallel wire cuts from
 $\mathcal{O}(16^n)$ to
 $\mathcal{O}(4^n)$~\cite{Brenner:2023txj,Harada:2023yqg}, and
 variational or Monte-Carlo-importance-sampled schemes co-optimize the
@@ -670,7 +788,7 @@ particularly promising direction, since lattice applications have been
 largely absent from the circuit-knitting literature to date.
 Extending the comparison to improved LGT
 Hamiltonians~\cite{Carena:2022kpg,Gustafson:2023aai,Ciavarella:2023mfc,Illa:2025dou,Illa:2025njz}
-and chiral lattice fermions~\cite{Clancy:2023kla,Singh:2025sye}, both
+and chiral lattice fermions~\cite{Clancy:2023kla,Singh:2025sye,Lamm:2026qsp}, both
 of which require beyond-nearest-neighbor couplings, will sharpen the
 cost-versus-fidelity tradeoffs we have identified here.
 
@@ -682,5 +800,3 @@ The authors acknowledge the support by the Department of Energy through the Ferm
 
 
 \end{document}
-
-
