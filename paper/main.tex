@@ -477,21 +477,23 @@ The summed weight, however, is the squared norm of the projection of $\mathcal{O
 
 \input{generated/fv_data_table}
 
-\begin{figure}[t]
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=\linewidth]{figures/fv_gaplo.pdf}
-    \caption{Top: weighted gap $\overline{\Delta}$, Eq.~\eqref{eq:Dbardef}, versus the number of sites $N_s$ for PBC (squares) and OBC (circles) at $(m_0,\eta)=(0.1,0.5)$.
+    \includegraphics[width=\textwidth]{figures/fv_gaplo.pdf}
+    \caption{Left: weighted gap $\overline{\Delta}$, Eq.~\eqref{eq:Dbardef}, versus the number of sites $N_s$ for PBC (squares) and OBC (circles) at $(m_0,\eta)=(0.1,0.5)$.
     The dashed line is the infinite-volume value $\overline{\Delta}_\infty$ taken from PBC at $N_s=10$, and the solid curve is the $1/N_s$ series of Eq.~\eqref{eq:dbarfit}.
-    Bottom: $N_s$ times the difference between OBC and the infinite-volume value, versus $1/N_s$, for $\overline{\Delta}$ (circles) and for the summed weight $W$ of Eq.~\eqref{eq:Wdef} (diamonds).
+    Middle and right: $N_s$ times the difference between the OBC result and the infinite-volume value, versus $1/N_s$, for $\overline{\Delta}$ and for the summed weight $W$ of Eq.~\eqref{eq:Wdef}.
     A correction that begins at order $1/N_s$ extrapolates to a nonzero intercept; one that falls faster extrapolates to zero.
-    Solid curves are the series of Eqs.~\eqref{eq:dbarfit} and~\eqref{eq:wfit} with their uncertainty bands, and dashed curves are the best-fit three-parameter series beginning at $1/N_s^2$, fitted to $6\le N_s\le18$.
-    In both panels filled symbols enter the fits and open symbols ($N_s=24$) are held out.
-    Error bars are conservative convergence estimates (see text) and are smaller than the symbols where not visible.
+    Solid curves are the series of Eqs.~\eqref{eq:dbarfit} and~\eqref{eq:wfit}, drawn over the sizes they describe.
+    Each shaded band is the envelope of the uncertainty ranges of that fit and of two neighboring acceptable fits, the series of one order lower and the same series with the next larger $N_{\min}$, so that it includes the effect of truncating the series; in the left panel the band is narrower than the line.
+    Dashed curves are the best-fit three-parameter series beginning at $1/N_s^2$, fitted to $6\le N_s\le18$.
+    Filled symbols enter the fit shown by the solid curve and open symbols do not; $N_s=24$ is held out of every fit.
+    Error bars are conservative convergence estimates (see text) and are smaller than the symbols where not visible; in the middle panel those for $N_s=16$ and $18$ extend beyond the frame.
     \label{fig:fv_gaplo}}
-\end{figure}
+\end{figure*}
 
 \inlinesection{Results.}
-Table~\ref{tab:fv-data} and the top panel of Fig.~\ref{fig:fv_gaplo} show the two moments at each size.
+Table~\ref{tab:fv-data} and the left panel of Fig.~\ref{fig:fv_gaplo} show the two moments at each size.
 With PBC the weighted gap is $1.46407$ at $N_s=4$, $1.46643$ at $N_s=6$, and $1.46646$ at $N_s=8$ and $10$.
 It is thus $0.16\%$ below its limit at $N_s=4$ and within $0.002\%$ of it by $N_s=6$, as expected for exponentially small corrections.
 These statements refer to the central values, on which the two implementations agree to $3\times10^{-8}$ for $N_s\le10$; the uncertainties in Table~\ref{tab:fv-data} are the more conservative estimates described above.
@@ -540,8 +542,8 @@ The series beginning at $1/N_s^2$ and the exponential with a free rate become ac
 A single power is acceptable from $N_{\min}=6$, with $\beta=1.120(7)$; the exponent moves to $1.09(2)$ and $1.06(14)$ for $N_{\min}=8$ and $10$, as expected if it absorbs a $1/N_s^2$ term at small $N_s$.
 The same trend is seen without any fit in the effective exponent obtained from successive sizes, $\beta_{\rm eff}=\ln[\delta(N_s)/\delta(N_s')]/\ln(N_s'/N_s)$ with $\delta=|y_{\rm OBC}-y_\infty|$, which for $W$ decreases monotonically from $1.27$ for $N_s=4,6$ to $1.05$ for $N_s=18,24$.
 
-The bottom panel of Fig.~\ref{fig:fv_gaplo} displays the test graphically.
-It shows $N_s$ times the difference between the OBC result and the infinite-volume value as a function of $1/N_s$.
+The middle and right panels of Fig.~\ref{fig:fv_gaplo} display the test graphically.
+They show $N_s$ times the difference between the OBC result and the infinite-volume value as a function of $1/N_s$.
 A correction that begins at order $1/N_s$ extrapolates to the nonzero intercept $b$, while any faster fall-off must extrapolate to zero.
 The series that begin at $1/N_s^2$ bend away from the results at the largest sizes and miss the held-out point for $W$.
 
@@ -554,6 +556,8 @@ As our result we quote, for each observable, the series of the form of Eq.~\eqre
    &\quad+\frac{0.243(3)}{N_s^3},
 \end{align}
 valid for $N_s\ge4$ and $N_s\ge6$, respectively.
+The uncertainties shown are those of the fits.
+Among acceptable fits, lowering the order of the series by one or raising $N_{\min}$ by one step moves the leading coefficient within the range $-0.181$ to $-0.162$ for $\overline{\Delta}$ and $0.1566$ to $0.1589$ for $W$; the bands in Fig.~\ref{fig:fv_gaplo} show this variation.
 If $y_\infty$ is left free in these two fits instead of being constrained, the OBC results alone determine the limits and give
 \begin{equation}
 \label{eq:limitdiff}
