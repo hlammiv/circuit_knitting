@@ -459,10 +459,7 @@ The boundary-layer argument at the start of this section predicts that the OBC r
 \end{equation}
 where $y$ stands for $\overline{\Delta}$ or $W$.
 We test this against corrections that fall off faster: a series that begins at $1/N_s^2$, as for a single energy level of a particle in a box; a single power $b/N_s^{\beta}$; and an exponential, with a free rate $\kappa$ or with the rate fixed to the meson gap, $M\equiv\overline{\Delta}_\infty$.
-Each form is fitted to the OBC results for $N_{\min}\le N_s\le18$ with $y_\infty$ constrained to Eq.~\eqref{eq:pbcinf}, and $N_s=24$ is held out to test the prediction.
-Table~\ref{tab:fv-fits} lists the smallest $N_{\min}$ at which each form is acceptable.
-
-\input{generated/fv_fit_results}
+Each form is fitted to the OBC results for $N_{\min}\le N_s\le18$ with $y_\infty$ constrained to Eq.~\eqref{eq:pbcinf}, and $N_s=24$ is held out to test the prediction; the fits are listed in Table~\ref{tab:fv-fits} of App.~\ref{app:dmrg}.
 
 For the summed weight the outcome is unambiguous.
 The series of Eq.~\eqref{eq:series} through third order describes all sizes from $N_s=6$ and predicts $W=0.6721706(12)$ at $N_s=24$, where we measure $0.672161(11)$, while every alternative is rejected for all $N_{\min}\le10$.
@@ -833,86 +830,31 @@ The authors acknowledge the support by the Department of Energy through the Ferm
 \section{Details of the tensor-network calculations}
 \label{app:dmrg}
 
-This appendix records how the results of Sec.~\ref{sec:mass_gap_L} were obtained.
+With OBC the end sites lack one link, and we write $G_1=q_L\,Z_1\,\sigma^{x}_{1,2}$ and $G_{N_s}=\sigma^{x}_{N_s-1,N_s}\,Z_{N_s}\,q_R$ with $q_L,q_R=\pm1$.
+We use $q_L=q_R=-1$, the value that $\sigma^x$ takes on a link without flux.
+Exact diagonalization at $N_s=4$ and $6$ confirms that the lowest excitation then lies $1.29$ above the ground state, as with PBC, whereas each end with $q=+1$ adds a state at $1.05$, bound to the static charge at that end.
 
-\inlinesection{Boundary charges.}
-With PBC every site has two links and Eq.~\eqref{eq:gauss} applies as written.
-With OBC the end sites $n=1$ and $n=N_s$ each lack one link, and we write $G_1=q_L\,Z_1\,\sigma^{x}_{1,2}$ and $G_{N_s}=\sigma^{x}_{N_s-1,N_s}\,Z_{N_s}\,q_R$ with $q_L,q_R=\pm1$.
-The gauge term of Eq.~\eqref{eq:z2ham} has its lowest energy for $\sigma^x=-1$, which is therefore the value on a link that carries no flux; $q_L=q_R=-1$ thus describes a chain into which no flux enters, and we use it throughout.
-We confirmed by exact diagonalization at $N_s=4$ and $6$ that this is the choice whose spectrum corresponds to that of the periodic lattice: the lowest excitation lies at an energy $1.29$ above the ground state, as it does with PBC.
-Each end at which $q=+1$ is chosen instead raises the ground-state energy by $0.146$ and adds one state at an energy $1.05$ above the ground state, below every excitation of the periodic lattice and independent of $N_s$, as expected for a state bound to the static charge at that end.
+The eigenstates of $H+H_G$ are computed as matrix product states with \textsc{ITensor}~\cite{Fishman:2020gel}, the excited states one after another by DMRG with an energy penalty for overlap with the states already found.
+We compute the lowest $31$ states ($41$ for OBC at $N_s=16$ and for $N_s=24$), which contain the whole single-meson band at every size.
+The truncation error per bond is $10^{-11}$, and the bond dimension of the converged states did not exceed $65$ wherever it was recorded, far below the cap of $300$ to $400$.
+Each state receives between several hundred and several thousand sweeps, in successive stages for $N_s\ge14$, and results are averaged over up to four random starting states.
 
-\inlinesection{States.}
-The eigenstates of $H+H_G$ are represented as matrix product states and computed with the \textsc{ITensor} library~\cite{Fishman:2020gel}.
-Each matter site and each link is one qubit, ordered along the chain; for PBC the link that closes the ring couples the two ends of this ordering.
-The ground state is found by DMRG.
-Excited states are found one after another by DMRG on $H+H_G$ with an added energy penalty of $200$ for overlap with each state already found.
-We compute the ground state and the lowest $30$ excited states for $N_s\le18$, and $40$ excited states for OBC at $N_s=16$ and for both boundary conditions at $N_s=24$.
-In every calculation the number of states found below $\Delta_{\rm cut}$ equals the size of the single-meson band, $N_s$ for PBC and $N_s-1$ for OBC.
-
-\inlinesection{Convergence.}
-The truncation error at each bond is kept below $10^{-11}$.
-The bond dimension is capped at $300$, and at $400$ for OBC at $N_s=16$ and for both boundary conditions at $N_s=24$.
-The cap is not approached: in the stages run without noise, the bond dimension did not exceed $31$ for OBC and $65$ for PBC in any calculation for which it was recorded.
-Each state is started from a random matrix product state of bond dimension $10$ ($2$ for OBC at $N_s=14$ and $18$).
-During the first sweeps a small random perturbation of the density matrix (the DMRG noise term), decreasing to zero from $10^{-5}$ ($10^{-7}$ for OBC at $N_s=14$ and $18$), is applied to avoid trapping in a sector with static charges.
-For $N_s\le12$ up to $640$ sweeps are performed per state, stopping early once the energy changes by less than $10^{-7}$ between successive blocks of ten sweeps.
-For $N_s\ge14$ the calculation proceeds in stages: a first stage of $80$ to $640$ sweeps per state from random states, followed by stages of $320$ to $2560$ sweeps that continue from the stored states without noise.
-The total number of sweeps per state is at most $640$ for PBC at $N_s=14$, $2560$ for PBC at $N_s=16$ and $18$, and $720$ for PBC at $N_s=24$; it is about $3300$, $2900$, and $7400$ for OBC at $N_s=14$, $16$, and $24$, and for OBC at $N_s=18$ the last stage alone allowed up to $5120$.
-We use four random starting states for $N_s\le12$ and for OBC at $N_s=14$ and $18$, two for PBC at $N_s=14$, $16$, and $18$, and one for OBC at $N_s=16$ and for $N_s=24$.
-Results are averaged over starting states.
-
-\inlinesection{Validation and uncertainties.}
-Exact diagonalization of $H+H_G$ at $N_s=4$ and $6$ reproduces the DMRG values of $\overline{\Delta}$ to $1.4\times10^{-7}$ and those of $W$ to $3.3\times10^{-7}$.
-A second, independently written implementation, run with four starting states for $N_s\le18$, agrees with the first to $3\times10^{-6}$ in $\overline{\Delta}$ and $6\times10^{-8}$ in $W$ for $N_s\le10$, and to $2\times10^{-4}$ and $3\times10^{-6}$ at $N_s=12$.
-We quote the results of the first implementation throughout; for $N_s\ge14$ it was carried to tighter convergence than the second, whose results are consistent with it within their own larger uncertainties.
-
-The uncertainty on $\overline{\Delta}$ is dominated by the convergence of the DMRG states.
-For each state we compute the standard deviation of its energy, $\delta E_j=(\langle (H+H_G)^2\rangle-\langle H+H_G\rangle^2)^{1/2}$, which bounds the distance of that energy from an exact eigenvalue~\cite{Weinstein:1934}, and we propagate these through Eq.~\eqref{eq:Dbardef}.
-To this we add in quadrature the scatter among starting states and, for $N_s\ge14$, the amount by which $\overline{\Delta}$ changed in the last stage, which was between $7\times10^{-4}$ and $4\times10^{-3}$, and $0.012$ for PBC at $N_s=24$, whose first stage was short.
-Where there is a single starting state, the scatter is taken from the nearest smaller lattice.
-For PBC with $N_s\ge12$, where the result is known from the smaller lattices, the observed deviations are no more than about half of the quoted uncertainty.
-They all have the same sign: incomplete convergence lowers $\overline{\Delta}$, and the OBC results at the largest sizes may be low for the same reason, by an amount covered by their uncertainties.
-The uncertainty on $W$ combines the scatter among starting states, the difference between the two implementations where both are available, and the change in the last stage, which was at most $5\times10^{-5}$; it is never taken smaller than the accuracy established against exact diagonalization.
-The difference between the implementations does not enter the uncertainty on $\overline{\Delta}$, because for $N_s\ge14$ it measures the error of the less converged one.
-
-The summed weight is much better determined than the weighted gap at large $N_s$.
-As the lattice grows, the levels of the band move closer together and a DMRG state can mix neighboring levels.
-This degrades the individual energies that enter $\overline{\Delta}$, but $W$ is the squared norm of the projection of $\mathcal{O}\ket{E_0}$ onto the band, which does not change when states within the band are mixed.
-The PBC values of $W$ vary by less than $2\times10^{-5}$ for $6\le N_s\le24$.
-Table~\ref{tab:fv-data} lists both moments at every size.
+DMRG reproduces exact diagonalization at $N_s=4$ and $6$ to $4\times10^{-7}$ in both moments, and a second, independent implementation agrees to $3\times10^{-6}$ for $N_s\le10$.
+The uncertainty on $\overline{\Delta}$ combines in quadrature three contributions: the energy standard deviation of each state, $(\langle (H+H_G)^2\rangle-\langle H+H_G\rangle^2)^{1/2}$, which bounds its distance from an exact eigenvalue~\cite{Weinstein:1934}, propagated through Eq.~\eqref{eq:Dbardef}; the scatter among starting states; and, for $N_s\ge14$, the change in the last stage of the calculation.
+For PBC with $N_s\ge12$, where the answer is known from the smaller lattices, the actual deviations are at most half of this estimate and all negative: incomplete convergence lowers $\overline{\Delta}$.
+The uncertainty on $W$ combines the scatter among starting states, the difference between the two implementations, and the change in the last stage.
+The summed weight is far better determined than $\overline{\Delta}$ because it is unchanged when DMRG mixes neighboring levels of the band.
+Table~\ref{tab:fv-data} lists both moments.
 
 \input{generated/fv_data_table}
 
-\inlinesection{Tests of the functional form.}
-In the fits of Sec.~\ref{sec:mass_gap_L} the limit $y_\infty$ is a fit parameter constrained to the PBC value: Eq.~\eqref{eq:pbcinf} enters the $\chi^2$ as one additional data point.
-We call a fit acceptable if its $\chi^2$ probability exceeds $5\%$.
-Because the uncertainties on $\overline{\Delta}$ are conservative, the acceptable fits of Eq.~\eqref{eq:series} to $\overline{\Delta}$ have $\chi^2$ well below the number of degrees of freedom; the test is then conservative, in that a rejected form fails by more than its $\chi^2$ indicates.
-Table~\ref{tab:fv-fits-full} gives the details behind Table~\ref{tab:fv-fits}.
+In the fits, $y_\infty$ is a parameter constrained by Eq.~\eqref{eq:pbcinf}, which enters the $\chi^2$ as one additional data point, and a fit is acceptable if its $\chi^2$ probability exceeds $5\%$.
+Table~\ref{tab:fv-fits} gives the results for each form.
+Because the uncertainties on $\overline{\Delta}$ are conservative, acceptable fits to it have $\chi^2$ well below the number of degrees of freedom.
+The fits of Eqs.~\eqref{eq:dbarfit} and~\eqref{eq:wfit} use the smallest possible $N_{\min}$ and then the lowest acceptable order.
+Lowering the order or raising $N_{\min}$ among acceptable fits moves the leading coefficient within $-0.181$ to $-0.162$ for $\overline{\Delta}$ and $0.1566$ to $0.1589$ for $W$, the range shown by the bands in Fig.~\ref{fig:fv_gaplo}.
 
-For $W$, the series of Eq.~\eqref{eq:series} through third order describes all sizes from $N_s=6$ with $\chi^2/{\rm dof}=0.64/4$; through second order it is acceptable only from $N_{\min}=10$.
-The three-parameter series beginning at $1/N_s^2$ and the single power become acceptable only at $N_{\min}=12$, where few sizes remain, and their predictions at $N_s=24$ then miss the measured value by $12$ and $4$ times the combined uncertainty.
-The two-parameter series beginning at $1/N_s^2$ and the exponential forms are rejected for every $N_{\min}$.
-For $\overline{\Delta}$, the series through third order describes all sizes from $N_s=4$ with $\chi^2/{\rm dof}=0.07/5$, and through second order all sizes from $N_s=6$.
-The series beginning at $1/N_s^2$ and the exponential with a free rate become acceptable once the smallest lattices are dropped, at $N_{\min}=6$ for the three-parameter series and at $N_{\min}=8$ for the two-parameter series and the exponential; there the uncertainties on $\overline{\Delta}$ are too large to discriminate, although the predictions of these fits at $N_s=24$ all lie above the measured value, by one to two times the combined uncertainty.
-A single power is acceptable for $\overline{\Delta}$ from $N_{\min}=6$, with $\beta=1.120(7)$; the exponent moves to $1.09(2)$ and $1.06(14)$ for $N_{\min}=8$ and $10$, as expected if it absorbs a $1/N_s^2$ term at small $N_s$.
-The same trend is seen without any fit in the effective exponent obtained from successive sizes, $\beta_{\rm eff}=\ln[\delta(N_s)/\delta(N_s')]/\ln(N_s'/N_s)$ with $\delta=|y_{\rm OBC}-y_\infty|$, which for $W$ decreases monotonically from $1.27$ for $N_s=4,6$ to $1.05$ for $N_s=18,24$.
-
-The fits quoted in Eqs.~\eqref{eq:dbarfit} and~\eqref{eq:wfit} are obtained by taking $N_{\min}$ as small as possible and then the lowest order that is acceptable.
-The uncertainties shown there are those of the fits.
-Among acceptable fits, lowering the order of the series by one or raising $N_{\min}$ by one step moves the leading coefficient within the range $-0.181$ to $-0.162$ for $\overline{\Delta}$ and $0.1566$ to $0.1589$ for $W$; the bands in Fig.~\ref{fig:fv_gaplo} show this variation.
-
-\input{generated/fv_fit_details}
-
-Table~\ref{tab:fv-grid} lists, for every functional form and every $N_{\min}$, the fit in which the infinite-volume limit of the OBC results is a free parameter rather than constrained to the PBC value.
-The third-order series beginning at $1/N_s$ gives a limit consistent with PBC at every $N_{\min}$ at which it is acceptable.
-The first- and second-order series can have an acceptable $\chi^2$ at small $N_{\min}$ and yet a limit that differs from PBC by several times its uncertainty, for example for $\overline{\Delta}$ at second order with $N_{\min}=4$.
-The uncertainty of such a fit does not include the error made by truncating the series, which is why the fits of Sec.~\ref{sec:mass_gap_L} use the PBC value as a constraint and the result quoted there is the series of highest order.
-The forms without a $1/N_s$ term behave differently.
-For $W$, the series beginning at $1/N_s^2$ and the exponential, where acceptable, give limits that exceed the PBC value by $0.003$ to $0.006$, more than ten times their uncertainties.
-For $\overline{\Delta}$ their limits lie below the PBC value, and they become compatible with it only when the smallest lattices are dropped and the uncertainty of the extrapolation grows to several times $10^{-3}$.
-
-\input{generated/fv_fit_grid}
+\input{generated/fv_fit_results}
 
 \bibliography{ref3}% Produces the bibliography via BibTeX.
 
