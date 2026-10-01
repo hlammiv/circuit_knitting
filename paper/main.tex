@@ -941,16 +941,19 @@ We compute the ground state and the lowest $30$ excited states for $N_s\le18$, a
 In every run the single-meson band, which contains $N_s$ states for PBC and $N_s-1$ for OBC, lies entirely within the computed states.
 
 \inlinesection{Convergence.}
-The truncation error at each bond is kept below $10^{-11}$ and the bond dimension is capped at $300$.
-Each state is started from a random matrix product state of bond dimension $10$.
-During the first sweeps a small random perturbation of the density matrix (the DMRG noise term), decreasing from $10^{-5}$ to zero, is applied to avoid trapping in a sector with static charges.
-Up to $640$ sweeps are performed per state, stopping early once the energy changes by less than $10^{-7}$ between successive blocks of ten sweeps.
-For $N_s\ge14$ the calculation was then continued from the saved states, without noise, in further stages of the same kind, up to a cumulative $5120$ sweeps.
-In the last stage $\overline{\Delta}$ changed by between $7\times10^{-4}$ and $4\times10^{-3}$ and $W$ by at most $2\times10^{-5}$; these changes are included in the uncertainties of Table~\ref{tab:fv-data}.
-For PBC at $N_s=24$ only the final stage is available.
+The truncation error at each bond is kept below $10^{-11}$.
+The bond dimension is capped at $300$, and at $400$ for OBC at $N_s=16$ and for both boundary conditions at $N_s=24$.
+The cap is not approached: in the stages run without noise, the bond dimension did not exceed $31$ for OBC and $65$ for PBC in any calculation for which it was recorded.
+Each state is started from a random matrix product state of bond dimension $10$ ($2$ for OBC at $N_s=14$ and $18$).
+During the first sweeps a small random perturbation of the density matrix (the DMRG noise term), decreasing to zero from $10^{-5}$ ($10^{-7}$ for OBC at $N_s=14$ and $18$), is applied to avoid trapping in a sector with static charges.
+For $N_s\le12$ up to $640$ sweeps are performed per state, stopping early once the energy changes by less than $10^{-7}$ between successive blocks of ten sweeps.
+For $N_s\ge14$ the calculation proceeds in stages: a first stage of $80$ to $640$ sweeps per state from random states, followed by stages of $320$ to $2560$ sweeps that continue from the stored states without noise.
+The total number of sweeps per state is at most $640$ for PBC at $N_s=14$, $2560$ for PBC at $N_s=16$ and $18$, and $720$ for PBC at $N_s=24$; it is about $3300$, $2900$, and $7400$ for OBC at $N_s=14$, $16$, and $24$, and for OBC at $N_s=18$ the last stage alone allowed up to $5120$.
+In the last stage $\overline{\Delta}$ changed by between $7\times10^{-4}$ and $4\times10^{-3}$, and by $0.012$ for PBC at $N_s=24$, whose first stage was short; $W$ changed by at most $5\times10^{-5}$.
+These changes are included in the uncertainties of Table~\ref{tab:fv-data}.
 We use four random starting states for $N_s\le12$ and for OBC at $N_s=14$ and $18$, two for PBC at $N_s=14$, $16$, and $18$, and one for OBC at $N_s=16$ and for $N_s=24$.
 Results are averaged over starting states.
-Where there is a single starting state, the scatter among starting states is taken from the nearest smaller lattice, and where no earlier stage or second implementation is available the uncertainty on $W$ is not taken smaller than at the nearest smaller lattice.
+Where there is a single starting state, the scatter among starting states is taken from the nearest smaller lattice.
 
 \inlinesection{Validation.}
 Exact diagonalization of $H+H_G$ at $N_s=4$ and $6$ reproduces the DMRG values of $\overline{\Delta}$ to $1.4\times10^{-7}$ and those of $W$ to $3.3\times10^{-7}$; the latter is used as the minimum uncertainty on $W$ at every size.

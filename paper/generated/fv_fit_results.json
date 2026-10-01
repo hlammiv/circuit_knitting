@@ -333,16 +333,16 @@
    "W": 0.6652734192818239,
    "top_level": 1.4647297574034326,
    "W_seed_sem": 9.173942924194979e-07,
-   "Dbar_stage_shift": 0.0,
-   "W_stage_shift": 0.0,
+   "Dbar_stage_shift": 0.012449348378704261,
+   "W_stage_shift": 5.0758734587708076e-05,
    "Dbar_code_diff": null,
    "W_code_diff": null,
    "Dbar_exact": null,
    "W_exact": null,
    "Dbar_floor": 1.4087451005728724e-07,
    "W_floor": 3.3431888712964763e-07,
-   "Dbar_err": 0.010945964449324663,
-   "W_err": 5.49815343827173e-06
+   "Dbar_err": 0.016577105078397308,
+   "W_err": 5.076812502300481e-05
   },
   "24_OBC": {
    "n_seeds": 1,
