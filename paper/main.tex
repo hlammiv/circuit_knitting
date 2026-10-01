@@ -10,8 +10,11 @@
 \usepackage[plain]{fancyref}
 \usepackage{varioref}
 \usepackage{subfigure}
+\usepackage{soul}
 \usepackage{slashed}
 \usepackage{multirow}
+\usepackage{lineno}
+\usepackage{cancel}
 \usepackage{tikz}
 \usetikzlibrary{shapes}
 \usetikzlibrary{positioning}
@@ -63,6 +66,8 @@ citecolor=blue,urlcolor=blue,linkcolor=blue,pdfpagemode=UseOutlines]{hyperref}
 
 \newcommand{\fnal}{\affiliation{Fermi National Accelerator Laboratory, 
 Batavia, IL 60510, USA}}
+
+\linenumbers
 
 \begin{document}
 \preprint{FERMILAB-PUB-XX-XXX-T}
@@ -116,59 +121,105 @@ Extracting physical point predictions from quantum simulations of lattice gauge 
 
 \section{Introduction}
 
-Quantum simulation has the potential to become a powerful tool for investigating time-dependent phenomena in quantum field theories~\cite{Cloet:2019wre,Banuls:2019bmf,Bauer:2022hpo,Fang:2024ple}. Unlike classical computation, which quickly become intractable as system size grows, quantum computers are in principle well-suited to capture the full nonperturbative dynamics of these theories~\cite{Jordan:2011ne,Zohar:2012ay,Lamm:2019uyc,Ikeda:2020agk,Gustafson:2021imb,Cohen:2021imf,Barata:2022wim,Li:2022lyt,Carrillo:2024chu,Grieninger:2024axp,Barata:2024bzk,Farrell:2024fit,Li:2024nod,Farrell:2024mgu,Carena:2024peb,Chernyshev:2025lil,Shao:2025ygy,Andrade:2026lgt,Sukeno:2026mbqs}.
+Quantum simulation has the potential to become a powerful tool for investigating time-dependent phenomena in quantum field theories~\cite{Cloet:2019wre,Banuls:2019bmf,Bauer:2022hpo,Fang:2024ple}. Unlike classical computations, which quickly become intractable as system size grows, quantum computers are in principle well-suited to capture the full nonperturbative dynamics of these theories~\cite{Jordan:2011ne,Zohar:2012ay,Lamm:2019uyc,Ikeda:2020agk,Gustafson:2021imb,Cohen:2021imf,Barata:2022wim,Li:2022lyt,Carrillo:2024chu,Grieninger:2024axp,Barata:2024bzk,Farrell:2024fit,Li:2024nod,Farrell:2024mgu,Carena:2024peb,Chernyshev:2025lil,Shao:2025ygy,Andrade:2026lgt,Sukeno:2026mbqs}.
 
-As with classical lattice field theory, finite quantum simulations require regulation. Discretizing spacetime onto a lattice provides such a framework, but simulations at finite resources inevitably differ from the physical point. Systematic errors arise from sources such as finite spatial volume, nonzero lattice spacing, digitization of gauge field~\cite{Ciavarella:2025tdl}, approximating of the time-evolution operator~\cite{Kane:2025ybw}, and the use of unphysical masses. To make physical predictions, one must extrapolate results to the continuum, infinite-volume~\cite{Burbano:2025pef}, and physical-mass limits. The computational cost of a full simulation is therefore determined not only by the resources needed for an individual lattice but also by the ensemble of simulations required to perform these extrapolations.
+As with classical lattice field theory, quantum simulations require regulation.
+Discretizing spacetime onto a lattice provides such a framework, but simulations at finite resources differ from the physical point. 
+Systematic errors arise from sources including finite spatial volume, nonzero lattice spacing, digitization of the gauge field~\cite{Ciavarella:2025tdl}, approximating of the time-evolution operator~\cite{Kane:2025ybw}, and the use of unphysical masses. 
+To make physical predictions, one must extrapolate results to the continuum, infinite-volume~\cite{Burbano:2025pef}, and physical-mass limits. 
+The computational cost of a full simulation is, therefore, determined not only by the resources needed for an individual lattice but also by the ensemble of simulations required to perform these extrapolations.
+In particular, the choice of boundary conditions affects the scaling in lattice length $L$ of extrapolation to the infinite-volume limit~\cite{Briceno:2020rar}, and on quantum computers, nonlocal operators may complicate this step~\cite{Briceno:2018lfj}.
+Periodic boundary conditions (PBC) are typically preferred, as they preserve lattice translational invariance and thereby allow states to be classified by momentum. 
+This property is especially useful for studying scattering and dynamical processes. 
+There are, however, exceptions, for example in the study of topological observables, where open boundary conditions (OBC) may be more appropriate~\cite{Luscher:2011kk}.
 
-Among these extrapolations, reaching the infinite-volume limit is a critical step and the choice of boundary conditions greatly effects it~\cite{Briceno:2020rar}.  In particular, this step could be more difficult on quantum computers due to the emphasis on nonlocal operators~\cite{Briceno:2018lfj}. Periodic boundary conditions (PBCs) are typically preferred, as they preserve lattice translational invariance and thereby allow states to be classified by momentum. This property is especially useful for studying scattering and dynamical processes. There are exceptions, however—for example, in the study of topological observables—where open boundary conditions (OBCs) may be more appropriate~\cite{Luscher:2011kk}.
+From a hardware perspective, however, PBCs present a challenge. 
+While they capture the desired physics, they introduce long-range interactions across the lattice. 
+Quantum devices are generally restricted to one- or two-dimensional layouts with only local connectivity. 
+Implementing periodicity, therefore, requires routing quantum information across the processor using a network of SWAP gates. 
+The overhead from such SWAP networks can dominate the cost of a simulation~\cite{brierley2016efficientimplementationquantumcircuits,Zhu:2025upm,Parella-Dilme:2025yan} and can be particularly expensive when fermions are involved~\cite{PhysRevLett.120.110501}. 
+For this reason, most quantum field theory simulations performed to date have adopted OBC, which, while incurring larger finite-volume corrections, avoid the nonlocality problem and are more amenable to current hardware constraints.
 
-From a hardware perspective, however, PBCs present a challenge. While they capture the desired physics, they introduce long-range interactions across the lattice. Quantum devices are generally restricted to one- or two-dimensional layouts with only local connectivity. Implementing periodicity therefore requires routing quantum information across the processor using a network of SWAP gates. The overhead from such SWAP networks can dominate the cost of a simulation~\cite{brierley2016efficientimplementationquantumcircuits,Zhu:2025upm,Parella-Dilme:2025yan} and can be particularly expensive when fermions are involved~\cite{PhysRevLett.120.110501}. For this reason, most quantum field theory simulations performed to date have adopted OBCs, which, while incurring larger finite-volume corrections, avoid the nonlocality problem and are more amenable to current hardware constraints.
+Recently, alternative strategies have been proposed to mitigate this difficulty. 
+One such approach, known as circuit knitting~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}, replaces a single quantum circuit containing nonlocal entangling gates with an ensemble of circuits that involve only local gates and measurements. 
+Classical post-processing is then used to reconstruct observables of the original circuit. 
+In addition to reducing connectivity, the ``cutting'' of multi-qubit entangling gates , i.e., their replacement by multiple single-qubit gates, can lead to a reduction in errors~\cite{Yamamoto:2022yfd}. 
+While circuit knitting can reduce quantum connectivity requirements, it introduces an exponential sampling and circuit-execution overhead in the number of cuts, together with additional classical reconstruction costs, and can suffer from degraded signal-to-noise ratios. 
+Experimental demonstrations of circuit knitting have been performed~\cite{Singh:2023uhr}, and on-going research seeks to reduce the high costs and optimize cut placement~\cite{Perlin:2021,Chen:2022mgb,Lowe2023fastquantumcircuit,Lian:2023,Yang:2024jvu,10.1145/3579371.3589352,Piveteau:2025pso,Idan:2026cutting}.
 
-Recently, alternative strategies have been proposed to mitigate this difficulty. One such approach, known as circuit knitting~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}, replaces a single quantum circuit containing nonlocal entangling gates with an ensemble of circuits that involve only local gates and measurements. Classical post-processing is then used to reconstruct observables of the original circuit. In addition to reducing connectivity, the replacement of entangling gates by single-qubit ones can lead to a reduction in errors~\cite{Yamamoto:2022yfd}. While circuit knitting can reduce quantum connectivity requirements, it introduces an exponential sampling and circuit-execution overhead in the number of cuts, together with additional classical reconstruction costs, and can suffer from degraded signal-to-noise ratios. Experimental demonstrations of circuit knitting have been performed~\cite{Singh:2023uhr}, and on-going research seeks to reduce the high costs and optimize cut placement~\cite{Perlin:2021,Chen:2022mgb,Lowe2023fastquantumcircuit,Lian:2023,Yang:2024jvu,10.1145/3579371.3589352,Piveteau:2025pso,Idan:2026cutting}.
+In this work, we investigate the relative merits of three methods for approaching the infinite-volume limit in quantum simulations using {\color{red}\st{the} a} lattice $\mathbb{Z}_2$ gauge theory model as a test case: open boundary conditions, periodic boundary conditions implemented with SWAP networks, and periodic boundary conditions implemented with circuit knitting.
 
-In this work, we investigate the relative merits of three different methods for approaching the infinite-volume limit in quantum simulations, using the lattice $\mathbb{Z}_2$ gauge theory model as a test case: open boundary conditions, periodic boundary conditions implemented with SWAP networks, and periodic boundary conditions implemented with circuit knitting.
-
-
-
-The remainder of this paper is organized as follows. In Sec.~\ref{sec:theory} we review the lattice $\mathbb{Z}_2$ gauge theory with staggered matter, its Hamiltonian and the basic quantum circuits needed to simulate its time evolution.  This leads into Sec.~\ref{sec:infvolbc} where tensor network calculations are used to explore the relative cost of reaching the infinite volume limit with OBC vs PBC.  A discussion of how circuit knitting can be used to implement a virtual CNOT is found in Sec.~\ref{sec:knitting}, followed by numerical results using \textsc{Qiskit} in Sec.~\ref{sec:numresults}.  Finally, we conclude with discussion and future work in Sec.~\ref{sec:conclusion}.
-
+The remainder of this paper is organized as follows. 
+In Sec.~\ref{sec:theory}, we review the lattice $\mathbb{Z}_2$ gauge theory with staggered matter, its Hamiltonian and the basic quantum circuits needed to simulate its time evolution.  
+In Sec.~\ref{sec:infvolbc}, tensor network calculations are used to estimate the relative cost of reaching the infinite volume limit with OBC and PBC.  
+Sec.~\ref{sec:knitting} discusses implementation of a virtual CNOT via circuit knitting with numerical results from \textsc{Qiskit} simulations presented in Sec.~\ref{sec:numresults}.  
+Finally, we conclude and discuss future work in Sec.~\ref{sec:conclusion}.
 
 \section{Theory}
 \label{sec:theory}
+\HS{Do we write the Gauss law somewhere?}
+We begin by presenting the Hamiltonian describing $\mathbb{Z}_{2}$ lattice gauge theory in $1+1d$ with two-component Kogut-Susskind (staggered) fermions~\cite{PhysRevD.11.395,PhysRevD.13.1043}.
+%\st{Here we investigate the $1+1d$ $\mathbb{Z}_2$ gauge theory using the Kogut-Susskind lattice Hamiltonian with two-component staggered fermionic matter and open and periodic boundary conditions -- OBCs and PBCs respectively}~\cite{PhysRevD.11.395,PhysRevD.13.1043}. }
+In this model, all degrees of freedom have 2-state Hilbert space dimension which naturally maps to qubit-based quantum computers. 
+We make no further simplifications to the Hilbert space as they do not persist in higher dimensions~\cite{Zohar:2021nyc}.  
+For $N_{s}$ matter sites, the Hamiltonian is
+% \begin{equation}
+% \begin{split}
+%     H =& \sum_{n=1}^{N_s - 1}\bigg[ \frac{1}{2 a_s}\sigma^{x}_{n,n+1} + \frac{a_s \eta }{2}(\bar{\psi}_n\sigma_{n,n+1}^{z}\psi_{n+1} + h.c.)\bigg]\nonumber\\
+%     & +\ a_s m_0 \sum_{n=1}^{N_s}  (-1) ^{n}\bar{\psi}_n\psi_n,
+% \end{split}
+% \end{equation}
+\begin{equation}
+\begin{split}
+    H =& \sum_{n=1}^{N}\bigg[ \frac{1}{2 a_s}\sigma^{x}_{n,n+1} + \frac{a_s \eta }{2}(\psi^{\dagger}_n\sigma_{n,n+1}^{z}\psi_{n+1} + h.c.)\bigg]\\
+    & +\ a_s m_0 \sum_{n=1}^{N_s}  (-1) ^{n}\psi^{\dagger}_n\psi_n,
+\end{split}
+\end{equation}
+where
+\begin{equation}\label{eq:upper_limit}
+    N = \left\{
+    \begin{array}{l@{\,\,}l}
+        N_{s} - 1 & \text{ OBC,} \\
+        N_{s}     & \text{ PBC,}
+    \end{array}
+    \right.
+\end{equation}
+and 
+\begin{equation}
+    \psi_{N_{s}+1} \equiv \psi_{1},\quad \sigma^{i}_{N_{s}, N_{s}+1}\equiv \sigma^{i}_{N_{s},1}.
+\end{equation}
+The parameters $m_0$ and $\eta$ are the bare fermion mass and the gauge coupling respectively, $\psi_n$ is a fermion field on lattice site $n$, $\psi^{\dagger}_n$ is the corresponding antifermion field, and the Pauli matrices $\sigma_{n,n+1}^x$ and $\sigma_{n,n+1}^z$ act on the two-component state of the $\mathbb{Z}_2$ gauge-field, and $a_s$ is the spatial lattice spacing.   
+The three terms in $H$ represent the gauge kinetic term, the fermion hopping term, and the fermion mass term, respectively. 
+{\color{red}%\st{The difference between PBCs and OBCs comes from whether the  $\mathbb{Z}_2$ gauge-field can connect between the fermions at $n=N_s-1$ and $n=0$.}
+Periodic boundary conditions are realized by implementing a gauge-field connection between the fermions at $n=N_{s}$ and $n=1$; open boundary conditions are realized by omitting such a connection.
+In practice, this entails extending the upper limit of the sum over the gauge kinetic and fermion hopping terms to include a connnection between the terminal matter sites (cf. eq.~(\ref{eq:upper_limit}).} 
+{\color{blue}(Does the following (correctly) address Hersh's comment?)}{\color{red}Alternatively, periodic boundary conditions can be implemented (following a Jordan-Wigner transformation) by means of a phase on the boundary site at {\color{blue}$n=N_{s}$}; we implement the connection explicitly as this procedure does not generalize to higher dimensions.}
+\HS{if we don't have a $Z$ string for PBCs after Jordan-Wiger, then change discussion to say that we're hardcore bosons instead of fermions.}
+\HS{I think I was talking about the $Z$ string from JW, not the gauge fields. It's correct that the Z string on the last link gets replaced a phase, which is the fermion parity. So we just need to include that in the last link after JW.}
+For the remainder of the paper, we set $a_s = 1$ such that all dimensionful quantities are in lattice-spacing units.
 
-Here we investigate the $1+1d$ $\mathbb{Z}_2$ gauge theory using the Kogut-Susskind lattice Hamiltonian with two-component staggered fermionic matter and open and periodic boundary conditions -- OBCs and PBCs respectively~\cite{PhysRevD.11.395,PhysRevD.13.1043}. In this model, all degrees of freedom have 2-state Hilbert space dimension which naturally maps to qubit-based quantum computers. We make no further simplifications to the Hilbert space as they do not persist in higher dimensions~\cite{Zohar:2021nyc}.  
-
-\begin{figure*}
+\begin{figure*}[ht]
     \centering
     \includegraphics[width=\linewidth]{figures/lattice_z2_lbl.pdf}
     \caption{$N_s=6$ one-dimensional lattice used in this work. For PBCs (OBCs), the lattice is represented using twelve (eleven) qubits: three positron components $p_n$ on even sites colored, three electron components of the staggered fermion $e_n$ on odd sites colored green, and six (five) represent $\mathbb{Z}_2$-valued photon fields for which operators are labeled by adjacent pairs of lattice sites, e.g. $\sigma_{n,n+1}$ in orange.  The final positron is grayed to indicate the PBCs by using it as a shadow of $p_0$.} 
     \label{fig:schlat}
 \end{figure*}
 
-
-The lattice $\mathbb{Z}_2$ gauge-field Hamiltonian of length $N_s$ is
-\begin{eqnarray}
-    H &=& \sum_{n=1}^{N_s - 1}\Big[\frac{1}{2 a_s}\sigma^{x}_{n,n+1} + \frac{a_s \eta }{2}(\bar{\psi}_n\sigma_{n,n+1}^{z}\psi_{n+1} + h.c.)\Big]\nonumber\\
-    && +\ a_s m_0 \sum_{n=1}^{N_s}  (-1) ^{n}\bar{\psi}_n\psi_n,
-\end{eqnarray}
-where $m_0$ and $\eta$ are the bare fermion mass and the gauge coupling respectively, $\psi_n$ is a fermion field on lattice site $n$, $\bar{\psi}_n$ is the corresponding antifermion field, and the Pauli matrices $\sigma_{n,n+1}^x$ and $\sigma_{n,n+1}^z$ act on the two-component state of the $\mathbb{Z}_2$ gauge-field, and $a_s$ is the spatial lattice spacing.   The three terms in $H$ represent the gauge kinetic term, the fermion hopping term, and the fermion mass term, respectively. The difference between PBCs and OBCs comes from whether the  $\mathbb{Z}_2$ gauge-field can connect between the fermions at $n=N_s-1$ and $n=0$. For the remainder of the paper, we will set $a_s = 1$ such that all dimensionful quantities are in lattice-spacing units.
-
-
-In the Kogut-Susskind fermion formulation, a single 2-component spinor $\psi(x)$ is described by two 1-component staggered fields $\psi_n$ on neighboring sites. Here we denote the components on even sites by $p_n$ (for positron) and the components on odd sites by $e_n$ (for electron). A depiction for the case of $N_s=6$ is provided in Fig.~\ref{fig:schlat}. 
-
-After a Jordan-Wigner transformation~\cite{JordanPWignerE} to convert the fermionic degrees of freedom to bosonic ones,
-$H$ becomes
-
+In the Kogut-Susskind fermion formulation, a single 2-component spinor $\psi(x)$ is described by two 1-component staggered fields $\psi_n$ on neighboring sites. 
+Here, we denote the components on even sites by $p_n$ (for positron) and the components on odd sites by $e_n$ (for electron). 
+A depiction for the case of $N_s=6$ is provided in Fig.~\ref{fig:schlat}. 
+We perform a Jordan-Wigner transformation~\cite{JordanPWignerE} to convert the fermionic to bosonic degrees of freedom and write $H$ as
 \begin{equation}
     \begin{split}
 \label{eq:z2ham}
 H = & \frac{1}{2} \sum_{n=0}^{N_s - 1} \sigma^{x}_{n,n+1} - \frac{m_0}{2} \sum_{n=0}^{N_s - 1} (-1)^n Z_{n}\\
-&  + \frac{\eta}{4} \sum_{n=0}^{N_s-2}(X_n X_{n + 1} + Y_{n} Y_{n + 1})\sigma^{z}_{n,n+1}.
+&  + \frac{\eta}{4} \sum_{n=0}^{N_s-2}(X_n X_{n + 1} + Y_{n} Y_{n + 1})\sigma^{z}_{n,n+1},
 \end{split}
 \end{equation}
-The operators $X_n$, $Y_n$, and $Z_n$ denote Pauli matrices acting on the electron and positron qubit states.
-\HS{if we don't have a $Z$ string for PBCs after Jordan-Wiger, then change discussion to say that we're hardcore bosons instead of fermions.}
-
+\HS{this is the place where we'd need include that extra parity phase in the last link for PBC.}
+where the operators $X_n$, $Y_n$, and $Z_n$ denote Pauli matrices acting on the electron and positron qubit states.
+%We note that for our model since the state of each degree of freedom can be encoded in a single qubit 
+When we digitize the theory \HS{digitization isn't really needed, these are all qubits anyway.. so in a way digitization is trivial}, each site and link is represented by a single qubit; therefore, a lattice with $N_s$ sites can be encoded in $N_{q} = 2N_{s} -1$ qubits for OBC and $N_{q} = 2N_{s}$ qubits for PBC. %\st{$N_q = 2N_s - \delta_{OBC} $ qubits where $\delta_{OBC}$ indicates that when using OBCs there is one less photon gauge link.}}
 
 \begin{figure*}[tb!]
     \centering
@@ -179,48 +230,70 @@ The operators $X_n$, $Y_n$, and $Z_n$ denote Pauli matrices acting on the electr
 }
 \end{figure*}
 
-For our model, since the state of each degree of freedom can be encoded in a single qubit, a lattice with $N_s$ sites can be encoded in $N_q = 2N_s - \delta_{OBC} $ qubits where $\delta_{OBC}$ indicates that when using OBCs there is one less photon gauge link.
-
-We approximate the time evolution operator $U(t)=e^{-itH}$ via first order Trotterization~\cite{trotter1959product,Suzuki:1985,PhysRevX.11.011020} as,
+We approximate the time evolution operator $U(t)=e^{-iHt}$ via first order Trotterization~\cite{trotter1959product,Suzuki:1985,PhysRevX.11.011020} as,
 \begin{equation}
     \label{eq:secondordertrotter}
     U(t) \approx \mathcal{U}(t/\varepsilon)^{N_t} ,
 \end{equation}
 where $N_t$ is an integer and $\epsilon \equiv t/N_t$.
-With this, we split the Hamiltonian into a sum of three commuting operators
-In terms of the $H_i$, the Hamiltonian in Eq.~(\ref{eq:z2ham}) is given by 
+To this end, we split the Hamiltonian of eq.~(\ref{eq:z2ham}) into a sum of three non-commuting operators
 \begin{equation}
     H = \sum_{i=1}^3 H_i,
 \end{equation} 
-where the three Hamiltonians are
+where 
 \begin{equation}\label{eq:H2andH3}
 \begin{split}
-H_1 &=  \frac{1}{2} \sum_{n=0}^{N_s - 1} \sigma^{x}_{n,n+1} - \frac{m_0}{2} \sum_{n=0}^{N_s - 1} (-1)^n Z_{n}, \\
-H_2 &=  \frac{\eta}{2} \sum_{n=\text{even}}^{N_s-2}(X_n X_{n + 1} + Y_{n} Y_{n + 1})\sigma^{z}_{n,n+1},\\
-H_3 &=  \frac{\eta}{2} \sum_{n=\text{odd}}^{N_s-2}(X_n X_{n + 1} + Y_{n} Y_{n + 1})\sigma^{z}_{n,n+1}.
+    H_1 &=  \frac{1}{2} \sum_{n=0}^{N_s - 1} \sigma^{x}_{n,n+1} - \frac{m_0}{2} \sum_{n=0}^{N_s - 1} (-1)^n Z_{n}, \\
+    H_2 &=  \frac{\eta}{2} \sum_{n=\text{even}}^{N_s-2}(X_n X_{n + 1} + Y_{n} Y_{n + 1})\sigma^{z}_{n,n+1},\\
+    H_3 &=  \frac{\eta}{2} \sum_{n=\text{odd}}^{N_s-2}(X_n X_{n + 1} + Y_{n} Y_{n + 1})\sigma^{z}_{n,n+1},
 \end{split}
 \end{equation}
-Operator $H_1$ comprises the gauge-kinetic and fermion-mass terms, while $H_2$ and $H_3$ are the even- and odd-site fermion-hopping terms, respectively. With these, the Trotterized time-evolution operator in Eq.~(\ref{eq:secondordertrotter}) is 
+where $H_1$ comprises the gauge-kinetic and fermion-mass terms and $H_2$ and $H_3$ are the even- and odd-site fermion-hopping terms, respectively {\color{red}(Peter: is there a factor of $2$ difference in the fermion hoppings terms between eqs.~(\ref{eq:z2ham}) and (\ref{eq:H2andH3})?)}. 
+With these, the Trotterized time-evolution operator in Eq.~(\ref{eq:secondordertrotter}) is 
 \begin{equation}
     \mathcal{U}(t/\varepsilon) = \prod_{i=1}^3 \mathcal{U}_i(t/\varepsilon)=\prod_{i=1}^3  e^{-i(t/\epsilon) H_i}.
 \end{equation}
 
 
-The implementation of these unitaries are shown in Fig.~\ref{fig:circs}. While $\mathcal{U}_1$ requires only single-qubit gates, $\mathcal{U}_{2}$ and $\mathcal{U}_{3}$ require entangling gates to implement the coupling between the fermionic sites.  Because these are three-qubit gates, there is some freedom in how to implement the connectivity between them. In orderr to efficiently leverage all available hardware, two circuit representations of the hopping-term operator are considered: $\mathcal{U}_{fh,1}$ and $\mathcal{U}_{fh,2}$. For these, both the number of CNOT gates and which qubits must have connectivity differ. As we implement circuit knitting, it will be desirable to cut the periodic lattice at points that would use $U_{fh,2}$ as the three qubits can be divided by cutting only 2 CNOTs rather than 3.
+The implementation of these unitaries is shown in Fig.~\ref{fig:circs}. 
+While $\mathcal{U}_1$ requires only single-qubit gates, $\mathcal{U}_{2}$ and $\mathcal{U}_{3}$ require entangling gates to implement the coupling between the fermionic sites.  
+Because these are three-qubit gates, there is some freedom in implementing the connectivity between them. 
+In order to efficiently leverage all available hardware, two circuit representations of the hopping-term operator are considered: $\mathcal{U}_{fh,1}$ and $\mathcal{U}_{fh,2}$. 
+For these, both the number of CNOT gates and which qubits must have connectivity differ. 
+As we implement circuit knitting, it will be desirable to cut the periodic lattice at points that would use $U_{fh,2}$ as the three qubits can be divided by cutting only 2 CNOTs rather than 3.
 
-To keep our Hamiltonian sparse, we avoid projecting to the gauge-invariant sector of Hilbert space.  As a consequence, we must explicitly enforce gauge invariance during the construction of the initial state.
+To keep the Hamiltonian sparse, we do not project to the gauge-invariant sector of Hilbert space.  As a consequence, we must explicitly enforce gauge invariance during the construction of the initial state.
 Here our initial state $\ket{\phi}$ is taken as a linear superposition of two gauge-invariant states: the non-interacting vacuum state $\ket{\Omega}$  and a state $\ket{P}$ that has significant overlap with excited states such as electron-positron bound states. The superposition of these two states is 
 \begin{equation}
     \label{eq:initstate}
     \ket{\phi(N_s)} = \frac{1}{\sqrt{2}}\Big(|\Omega(N_s)\rangle + |P(N_s)\rangle\Big),
 \end{equation}
 The states $|\Omega(N_s)\rangle$ and $|P(N_s)\rangle$ are defined for lattices of size $N_s$ as
+% \begin{equation}
+%   \begin{split}
+%     \label{eq:compstates}
+%     &{\color{red}\cancel{|\Omega(N_s)\rangle = \left(\prod_{n=\text{even}}^{N_2-2\delta_{OBC}}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1},}} \\
+%     &{\color{red}|\Omega(N_s)\rangle_{OBC} = \left(\prod_{n=\text{even}}^{N_{s}-2}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1},}\\
+%     &{\color{red}|\Omega(N_s)\rangle_{PBC} = \left(\prod_{n=\text{even}}^{N_{s}}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1},}\\
+%     &|P(N_s)\rangle = X_m\sigma_{m,m+1}X_{n+1}\ket{\Omega(N_s)}.
+%   \end{split}
+% \end{equation}
 \begin{equation}
   \begin{split}
     \label{eq:compstates}
-    |\Omega(N_s)\rangle = &\left(\prod_{n=\text{even}}^{N_2-2\delta_{OBC}}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1}, \\
-    |P(N_s)\rangle = &X_m\sigma_{m,m+1}X_{n+1}\ket{\Omega(N_s)}.
+    % &{\color{red}\cancel{|\Omega(N_s)\rangle = \left(\prod_{n=\text{even}}^{N_2-2\delta_{OBC}}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1},}} \\
+    |\Omega(N_s)\rangle &= \left(\prod_{n=\text{even}}^{N}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1},  \\
+    |P(N_s)\rangle &= X_m\sigma_{m,m+1}X_{n+1}\ket{\Omega(N_s)}.
   \end{split}
+\end{equation}
+where
+\begin{equation}
+    N = \left\{
+    \begin{array}{l@{\,,\,}l}
+        N_{s} - 2 & \text{OBC} \\
+        N_{s}     & \text{PBC}
+    \end{array}
+    \right.
 \end{equation}
 where $H$ is the Hadamard gate and $m=N_s/2-1$ is the center lattice site.
 The circuit to build this state from the computational $|0....0\rangle$ state for $N_s=6$ is given in the left of Fig. \ref{fig:circs}.
@@ -229,20 +302,21 @@ In general, the object of interest in quantum simulations of LGTs are correlatio
 \begin{equation}
   C(t) =  \langle\phi | U^\dagger(t) O U(t) | \phi \rangle=\langle 0|\phi \, U^\dagger(t) O U(t) \, \phi^\dagger | 0 \rangle. \label{eq:correlator}
 \end{equation}
-which describe the evolution of an initial state $\ket{\phi} \equiv \phi^\dagger \ket{0}$ and its interaction with a operator $O$. The spectral representation of $C(t)$ can be obtained by inserting complete sets of energy eigenstates $\ket{E_n}$
+which describe the evolution of an initial state $\ket{\phi} \equiv \phi^\dagger \ket{0}$ and its interaction with a operator $O$. 
+The spectral representation of $C(t)$ is obtained by inserting complete sets of energy eigenstates $\ket{E_n}$
 \begin{equation}
   C(t) = \sum_{n,m} \braket{\phi}{E_m } \braket{ E_n }{ \phi } \mbraket{E_m}{O}{E_n} e^{-i(E_n - E_m)t}. \label{eq:spec}
 \end{equation}
 Measurements of $|C(t)|^2$ from quantum simulations can be fit to this oscillatory form in order to extract energy differences $E_n - E_m$~\cite{Charles:2023zbl} for use in scale setting~\cite{Carena:2021ltu,Clemente:2022cka,Crippa:2024cqr}. In this work, we compute correlation functions involving $\ket{\phi}$ and the operator
 \begin{equation}
 \label{eq:exciteoperator}
-    O = \psi^{\dagger}_n\sigma^{z}_{n,n+1}\psi_{n+1} + \psi^{\dagger}_n \sigma^{z}_{n, n+1}\psi^\dagger_{n+1} + h.c.\,,
+    O_{n} = \psi^{\dagger}_n\sigma^{z}_{n,n+1}\psi_{n+1} + \psi^{\dagger}_n \sigma^{z}_{n, n+1}\psi^\dagger_{n+1} + h.c.\,,
 \end{equation}
 which in the qubit basis takes the form:
 \begin{equation}
-  O = X_n \sigma^z_{n,n+1} X_{n+1}.
+  O_{n} = X_n \sigma^z_{n,n+1} X_{n+1}.
 \end{equation}
-Further, using Eq.~\eqref{eq:compstates} shows that 
+Furthermore, using Eq.~\eqref{eq:compstates}, we have 
 \begin{equation}
     \begin{pmatrix}
     \mbraket{ \Omega }{ O }{ \Omega }&\mbraket{ P }{ O }{ \Omega }\\
@@ -252,25 +326,27 @@ Further, using Eq.~\eqref{eq:compstates} shows that
         1&0\\
     \end{pmatrix},
 \end{equation}
-such that the value of $C(t=0)$ is known:
+such that the value of $C(t=0)$ is
 \begin{equation}
   \begin{split}
     C(0) &= \mbraket{ \phi(N_s) }{ O }{ \phi(N_s) } = 1.
   \end{split}
 \end{equation}
 
-Correlation functions $C(t)$ defined as in Eq.~\eqref{eq:correlator} with $\ket{\phi}$ as the initial state have time-dependence generically given by Eq.~\eqref{eq:spec}. In the limit $t\rightarrow\infty$, their Fourier transformations should sharply peak about $E_m-E_n$ values.
+Correlation functions $C(t)$ as defined as in Eq.~\eqref{eq:correlator} with $\ket{\phi}$ as the initial state have time-dependence generically given by Eq.~\eqref{eq:spec}. 
+In the limit $t\rightarrow\infty$, their Fourier transforms {\color{red}\st{should}} sharply peak about $E_m-E_n$ values.
 If $\ket{\Omega}$ and $\ket{P}$ each overlap predominantly with a single energy eigenstate with energy $E_{\Omega}$ and $E_P$, respectively, then the time-dependence of $C(t)$ reduces to  
-\begin{align}
-  C(t)&\approx \cos[(E_P-E_{\Omega})t] \mbraket{\Omega}{O(t)}{P} \notag\\
-  &\hspace{10pt} + \frac{1}{2} \mbraket{\Omega}{O(t)}{\Omega} + \frac{1}{2} \mbraket{P}{O(t)}{P} \notag\\
+\begin{equation}
+\begin{split}
+  C(t)&\approx \cos[(E_P-E_{\Omega})t] \mbraket{\Omega}{O(t)}{P}\\
+  &\hspace{10pt} + \frac{1}{2} \mbraket{\Omega}{O(t)}{\Omega} + \frac{1}{2} \mbraket{P}{O(t)}{P} \\
   &=\cos(M t)+\hdots \label{eq:spec01}
-\end{align}
-where $M=E_P-E_{\Omega}$ is the energy difference between the eigenstates dominantly overlapping with $\ket{P(N_s)}$ and $\ket{\Omega(N_s)}$ and the $\ldots$ denotes contributions from other states with different $t$-dependence. 
+\end{split}
+\end{equation}
+where $M=E_P-E_{\Omega}$ is the energy difference between the eigenstates dominantly overlapping with $\ket{P(N_s)}$ and $\ket{\Omega(N_s)}$ and the ellipsis denotes contributions from other states with different $t$-dependence. 
 Fits to Eq.~\eqref{eq:spec01} can interrogate this approximation.
 If the single-state contribution $\cos(Mt)$ provides a good fit to $C(t)$, then $M$ can be expected to describe the energy gap between an electron-positron bound state and the vacuum, which corresponds to the mass of the particle associated with this state in the continuum and infinite-volume limits.
-
-Finally, due to trotterization, we don't obtain $C(t)$ from the quantum simulations but instead an approximation to it, defined as
+Finally, due to Trotterization, we do not obtain $C(t)$ from the quantum simulations but instead an approximation thereof defined as
 \begin{equation}
     \label{eq:simobservable}
     \mathfrak{C}(t/\varepsilon) = \mbraket{ \phi(N_s) }{ \mathcal{U}^{\dagger}(t/\varepsilon)^{N_t} \ O \  \mathcal{U}(t/\varepsilon)^{N_t} }{ \phi(N_s) },
@@ -280,7 +356,7 @@ where $\mathcal{U}(t/\varepsilon)$ is defined in Eq.~\eqref{eq:secondordertrotte
 \section{Infinite Volume Limit and Boundary Conditions}
 \label{sec:infvolbc}
 
-A central question for quantum simulations is how faithfully small-lattice
+A central question for quantum simulations {\color{magenta} (Mike: ...) } is how faithfully small-lattice
 OBC or PBC results represent the infinite-volume theory.  With PBC, the
 L\"uscher analysis~\cite{Luscher:1985dn,Luscher:1986pf} shows finite-volume
 corrections to single-particle masses from momentum-projected correlators
@@ -295,47 +371,59 @@ below for the mesonic OBC observable.
 \subsection{Mass gap of \texorpdfstring{$\mathbb{Z}_2$}{Z2} as a function of $L$}
 \label{sec:mass_gap_L}
 
+{\color{magenta} Mike: overlap factors between operators and meson states are a straightforward thing to compute with DMRG that enter as ingredients to lots of other calculations of matrix elements. 
+
+Don't use $k$ for eigenstates that don't have definite momentum. Use $|n>$ for general energy eigenstates.
+
+What happens to zeroth moment $\sum_{k < k_{\rm cut}(N_s)} w_k$? Does it have a well-defined $L\rightarrow \infty$ limit so that we don't have to start with this $w_k$ weighted gap observable?
+
+Alternatively, could we use $\left< n_{e^-} + n_{e^+} \right> \sim \left< n_n \right> \sim \left< N_f \right>$
+
+Swap $L$ for $N_s$. Should it be $e^{-M N_s}$
+
+Rephrase as hypothesis testing of which model describes the OBC data --- I'm pretty sure that one expects $1/L$ a priori, if fitting more general forms confirms that I think we can just run with it and avoid having to do any BMA
+}
+
 To avoid selecting a single eigenstate by hand and to keep the formal
 definition identical for OBC and PBC, we use the overlap-weighted
 spectral first moment of the zero-momentum projection of the excitation
 operator of Eq.~\eqref{eq:exciteoperator},
+% \begin{equation}
+%    \mathcal{O}_{p=0} \;\equiv\; \frac{1}{\sqrt{N_s}} \sum_{n} X_n\,\sigma^{z}_{n,n+1}\,X_{n+1},
+% \label{eq:Op0def}
+% \end{equation}
 \begin{equation}
-   \mathcal{O}_{p=0} \;\equiv\; \frac{1}{\sqrt{N_s}} \sum_{n} O_n,
-   \qquad
-   O_n \;=\; X_n\,\sigma^{z}_{n,n+1}\,X_{n+1},
+   \mathcal{O}_{p=0} \;\equiv\; \frac{1}{\sqrt{N_s}} \sum_{n} O_n%,
+   % \quad
+   % O_n \;=\; X_n\,\sigma^{z}_{n,n+1}\,X_{n+1},
 \label{eq:Op0def}
 \end{equation}
-with the meson-band-restricted first moment
+with the meson-band-restricted first moment {\color{magenta} (Mike: ?) }
 \begin{equation}
 \label{eq:gbarOdef}
-   \overline{g}_{\mathcal{O}_{p=0}} \;\equiv\;
-   \frac{\sum_{k:\, g_k<g_{\rm cut}} w_k\, g_k}{\sum_{k:\, g_k<g_{\rm cut}} w_k},
-   \qquad
-   w_k \;=\; \big| \langle k|\mathcal{O}_{p=0}|\Omega\rangle\big|^2 ,
+   \overline{\Delta} \;\equiv\;
+   \frac{\sum_{k:\, g_k<g_{\rm cut}} w_n\, \Delta_n}{\sum_{k:\, g_k<g_{\rm cut}} w_n},
+   \,
+   w_n \;=\; \big| \langle n|\mathcal{O}_{p=0}|\Omega\rangle\big|^2 ,
 \end{equation}
-where $g_k=E_k-E_0$ are gaps above the vacuum $|\Omega\rangle$ and
+where $\Delta_{n} \equiv E_n-E_0$ are gaps above the vacuum $|\Omega\rangle$ and \textcolor{orange}{(Ruth: use $\Delta$ instead of g, dont label states as $|k\langle$ when theyre not momentum eigenstates)}
 $g_{\rm cut}=2$ sits below the lowest high-band state at $g\simeq 2.38$
-(verified to remain above $g_{\rm cut}$ across all $L$ studied),
-isolating the meson band that $\mathcal{O}_{p=0}$ produces from the
-vacuum.  At fixed bare parameters $(m_0,\eta,\alpha)=(0.1,0.5,1)$,
+(verified to remain above $g_{\rm cut}$ across all $L$ studied), {\color{red}thus} isolating the meson band that $\mathcal{O}_{p=0}$ produces from the
+vacuum. 
+
+\textcolor{orange}{(Ruth: rewrite to say G's are Gauss law operators at beginning so connection to boundary charges is more logical/intuitive)}At fixed bare parameters $(m_0,\eta,\alpha)=(0.1,0.5,1)$,
 $\overline{g}_{\mathcal{O}_{p=0}}$ should converge to a common
 $L\to\infty$ limit under both boundary conditions.
-
-For OBC the boundary links are truncated in the $xz$ basis and the two
+{\color{blue}physics intuition and cleaner talk}
+For OBC, the boundary links are truncated in the $xz$ basis and the two
 boundary generators $G_1,\,G_{N_s}$ require external boundary-charge
-inputs $\mathrm{bg}_L,\mathrm{bg}_R\in\{\pm 1\}$.  Of the four sign
-assignments scanned at $L=8$, only $(\mathrm{bg}_L,\mathrm{bg}_R)=(-,-)$
-gives a clean correspondence with the PBC meson at $g\simeq 3.39$; the
-other three admit a boundary-localized state at $g\simeq 1.07$ below
-the bulk meson, and we use $(-,-)$ throughout.  To suppress drift into unphysical Gauss sectors during the
-variational search we add the soft penalty
-$H_{\rm Gauss}=-\tfrac{\lambda_{\rm G}}{2}\sum_n\eta_n G_n$ with
-$G_n=\sigma^{x}_{n-1,n}Z_n\sigma^{x}_{n,n+1}$ and $\lambda_{\rm G}=20$,
-omitted on boundary links for OBC.
+inputs $\mathrm{bg}_L,\mathrm{bg}_R\in\{\pm 1\}$.  
+Of the four sign assignments scanned at $L=8$, only $(\mathrm{bg}_L,\mathrm{bg}_R)=(-,-)$ gives a clean correspondence with the PBC meson at $g\simeq 3.39$; the other three admit a boundary-localized state at $g\simeq 1.07$ below
+the bulk meson, and we use $(-,-)$ throughout.  
+To suppress drift into unphysical Gauss sectors during the
+variational search we add the soft penalty $H_{\rm Gauss}=-\tfrac{\lambda_{\rm G}}{2}\sum_n\eta_n G_n$ with $G_n=\sigma^{x}_{n-1,n}Z_n\sigma^{x}_{n,n+1}$ and $\lambda_{\rm G}=20$, omitted on boundary links for OBC.
 
-For each even $L$ from $4$ to $18$, plus $L=24$, we compute the lowest
-$k_{\rm max}+1$ eigenpairs of $H+H_{\rm Gauss}$ via
-DMRG~\cite{White:1992zz}, with $k_{\rm max}=30$ ($L\leq 18$) or $40$
+For each even $L$ from $4$ to $18$, and additionally $L=24$, we compute the lowest $k_{\rm max}+1$ eigenpairs of $H+H_{\rm Gauss}$ via density matrix renormalization group (DMRG)~\cite{White:1992zz}, with $k_{\rm max}=30$ ($L\leq 18$) or $40$. 
 ($L=24$), which we numerically confirmed fully contain the meson band.  Excited states use orthogonality penalties of weight $200$, and
 a cold-start noise schedule $[10^{-7},10^{-8},10^{-9},0]$ suppresses
 trapping in unphysical Gauss sectors.  Converged bond dimensions do
@@ -344,14 +432,11 @@ Sweep convergence is verified by warm-starting from saved MPSs until
 per-state variances and $\overline{g}_{\mathcal{O}_{p=0}}$ stabilize
 at $\sim\!10^{-3}$, with the residual scatter folded into the error
 bars of Fig.~\ref{fig:fv_gaplo}.
-
 The PBC values are seen to converge within statistical errors by
 $L=16$, so for the larger volumes we report the $L=18$ and $L=24$ PBC
 as the mean and standard deviation of the $L=10$--$16$ PBC plateau.
-
-Fig.~\ref{fig:fv_gaplo} summarizes the results.  At $L\geq 6$ the PBC
-value of $\overline{g}_{\mathcal{O}_{p=0}}$ sits on a plateau at
-$\simeq 1.466$ with no resolved volume dependence ($L=4$ is slightly
+Fig.~\ref{fig:fv_gaplo} summarizes the results.  
+At $L\geq 6$ the PBC value of $\overline{g}_{\mathcal{O}_{p=0}}$ sits on a plateau at $\simeq 1.466$ with no resolved volume dependence ($L=4$ is slightly
 off at $1.464$); the OBC value rises monotonically from $1.413$ ($L=4$)
 to $1.459$ ($L=24$) toward this plateau, with the difference
 $\mathrm{OBC}-\mathrm{PBC}$ (using the plateau-averaged PBC at
@@ -370,17 +455,20 @@ the same range.
     posterior cross-check.  Bottom: OBC$-$PBC with the AIC$^*$-weighted
     extrapolation band, widened at small $L$ by fit forms that drop
     $L=4,6$.  Dashed line marks zero.
+    {\color{magenta} be consistent with open symbols as not fitted points in bottom panel. Maybe keep them closed in top panel?}
     \label{fig:fv_gaplo}}
 \end{figure}
 
 To extrapolate to $L\to\infty$ we perform weighted fits of the OBC$-$PBC
 difference data ($L\leq 18$, with $L=24$ held out) with five functional
 forms,
-\begin{align}
-   &a+b/L,\qquad a+b/L^2,\qquad a+b/L+c/L^2,\nonumber\\
+\begin{equation}
+\begin{split}
+   &a+b/L,\qquad a+b/L^2,\qquad a+b/L+c/L^2,\\
    &a+b/L^{\beta},\qquad a+b\,e^{-m_{\rm meson} L},
 \label{eq:fitforms}
-\end{align}
+\end{split}
+\end{equation}
 each with even $L_{\min}$ from $4$ to $12$.  To keep the more flexible
 forms from degenerating, $\beta$ is bounded to $[0.5,3]$ and the
 exponential rate is pinned to $m_{\rm meson}\simeq 1.466$ (the converged
@@ -400,11 +488,13 @@ combines statistical and inter-fit spread.
 The average is shown as the band in Fig.~\ref{fig:fv_gaplo} (bottom)
 and gives
 \begin{equation}
+\begin{split}
    \lim_{L\to\infty}\,
-   \big[\overline{g}_{\mathcal{O}_{p=0}}\big]_{\rm OBC}
-   - \big[\overline{g}_{\mathcal{O}_{p=0}}\big]_{\rm PBC}
-   \;=\; -0.001(13)_{\rm stat}(4)_{\rm sys} ,
+   &\big[\overline{g}_{\mathcal{O}_{p=0}}\big]_{\rm OBC}
+   - \big[\overline{g}_{\mathcal{O}_{p=0}}\big]_{\rm PBC}\\
+   \;&=\; -0.001(13)_{\rm stat}(4)_{\rm sys} ,
 \label{eq:ainfresult}
+\end{split}
 \end{equation}
 with the statistical error from averaged parameter uncertainties and
 the systematic from inter-fit spread.  Restricting to the two
@@ -435,24 +525,11 @@ $\exp(-mL)\ll 1/L$ across our volumes, so the polynomial dominates.
 
 \subsection{SWAP cost}
 \label{sec:swap}
-Implementing the dynamics of a lattice gauge theory on a quantum
-processor requires either native connectivity between the qubits
-encoding interacting degrees of freedom or qubit routing.  Fermionic-SWAP
-networks and their optimized variants for restricted hardware
-connectivity~\cite{Kivlichan:2017ngt,Hashim:2021loh}, together with
-general routing strategies for limited-connectivity
-devices~\cite{Cowtan:2019jqo}, provide the techniques applied to LGT
-routing.  Here we first record the counts that follow from a direct embedding
-of a PBC LGT on a 2d square nearest-neighbor processor, with $\mathcal{F}$ the
-per-link overhead (physical qubits per logical site); these should be
-read as upper bounds, since more elaborate scheduling within the cited
-techniques can lower the prefactor without changing the $L$-scaling.  This
-square-grid assumption is also relevant to IBM's Nighthawk generation, which
-uses degree-four square-lattice connectivity~\cite{ibm-processor-types}.  By
-contrast, the Eagle-generation \washington{} model used in
-Sec.~\ref{sec:numresults} and the Heron r2/r3 processors use heavy-hex
-connectivity, for which the finite-$L$ routing prefactor is architecture and
-compiler dependent.
+Implementing the dynamics of a lattice gauge theory on a quantum processor requires either native connectivity between the qubits encoding interacting degrees of freedom or qubit routing.  
+Fermionic-SWAP networks and their optimized variants for restricted hardware connectivity~\cite{Kivlichan:2017ngt,Hashim:2021loh}, together with general routing strategies for limited-connectivity devices~\cite{Cowtan:2019jqo}, provide the techniques applied to LGT routing.  
+Here we first record the counts that follow from a direct embedding of a PBC LGT on a 2d square nearest-neighbor processor, with $\mathcal{F}$ the per-link overhead (physical qubits per logical site); these are to be read as upper bounds as more elaborate scheduling within the cited techniques can lower the prefactor without changing the $L$-scaling.  
+This square-grid assumption is also relevant to IBM's Nighthawk generation, which uses degree-four square-lattice connectivity~\cite{ibm-processor-types}. 
+By contrast, the Eagle-generation \washington{} model used in Sec.~\ref{sec:numresults} and the Heron r2/r3 processors use heavy-hex connectivity for which the finite-$L$ routing prefactor is architecture and compiler dependent.
 
 For the 2d case with PBC mapped onto a 2d square processor, each of the
 $L$ periodic links per direction requires $(L-1)$ SWAPs to bring
@@ -467,69 +544,53 @@ For a heavy-hex processor, the square-grid distance $L-1$ must be replaced by
 graph distances in the chosen physical-qubit layout.  If
 $\overline d_x(L)$ and $\overline d_y(L)$ are the average shortest-path
 distances between the embedded qubits joined by periodic links in the two
-directions, we define the following direct-routing bookkeeping estimate; it
-is not an optimized routing bound:
+directions, we define the following direct-routing {\color{red}\st{bookkeeping}} estimate {\color{red} \st{it} which} 
+is not an optimized routing bound
 \begin{equation}
 N_{\text{SWAP}}^{(2\text{d},\,\mathrm{hh})}
 \simeq 2L\left[\overline d_x(L)+\overline d_y(L)-2\right]\mathcal{F}
 +N_{\mathrm{bulk}}^{(\mathrm{hh})}.
 \end{equation}
-The factor of two again accounts for forward and return routing.
-$N_{\mathrm{bulk}}^{(\mathrm{hh})}$ denotes routing needed even away from the
-periodic boundary: the square-lattice interaction graph has degree-four
-vertices, whereas heavy-hex hardware has degree at most three and therefore
-does not natively embed every square-lattice nearest-neighbor interaction.
-Square-lattice connectivity can nevertheless be emulated on heavy-hex with
-constant local routing overhead~\cite{ibm-heavy-hex}; comparative compilation
-studies likewise find topology-dependent communication overheads for
-heavy-hex and square processors~\cite{Rached:2024routing}.
-For a local layout, $\overline d_{x,y}(L)=\mathcal{O}(L)$ and
-$N_{\mathrm{bulk}}^{(\mathrm{hh})}=\mathcal{O}(L^2\mathcal{F})$.  Heavy-hex
-therefore preserves the $\mathcal{O}(L^2)$ scaling in 2d but generally changes
-the finite-size prefactor.  In 1d a path can be embedded natively, so the
-leading distinction is instead the graph distance required to close the
-single periodic edge, as seen in the Washington compilation results of
-Table~\ref{tab:fig7-data}.
+The factor of $2$ accounts for forward and return routing.
+$N_{\mathrm{bulk}}^{(\mathrm{hh})}$ denotes routing needed even away from the periodic boundary: the square-lattice interaction graph has degree-four vertices, whereas heavy-hex hardware has degree at most three and, therefore, does not natively embed every square-lattice nearest-neighbor interaction.
+Square-lattice connectivity can nevertheless be emulated on heavy-hex with constant local routing overhead~\cite{ibm-heavy-hex}; comparative compilation studies likewise find topology-dependent communication overheads for heavy-hex and square processors~\cite{Rached:2024routing}.
+For a local layout, $\overline d_{x,y}(L)=\mathcal{O}(L)$ and $N_{\mathrm{bulk}}^{(\mathrm{hh})}=\mathcal{O}(L^2\mathcal{F})$.  
+Heavy-hex, therefore, preserves the $\mathcal{O}(L^2)$ scaling in 2d but generally changes the finite-size prefactor.  
+In $1d$, a path can be embedded natively, so the leading distinction is instead the graph distance required to close the single periodic edge, as seen in the Washington compilation results of Table~\ref{tab:fig7-data}.
 
-For the 3d case mapped onto the same 2d processor by laying the $L$
-2d layers side-by-side along one processor direction (each layer
-occupying an $L\!\times\!L$ patch), the per-step cost is the sum of
-$L$ copies of $N_{\text{SWAP}}^{(2\text{d})}$ plus an additional
-$2L^{2}(L-1)\mathcal{F}$ inter-layer SWAPs,
+For the $3d$ case mapped onto the same 2d processor by laying the $L$ $2d$ layers side-by-side along one processor direction (each layer occupying an $L\!\times\!L$ patch), the per-step cost is the sum of $L$ copies of $N_{\text{SWAP}}^{(2\text{d})}$ plus an additional $2L^{2}(L-1)\mathcal{F}$ inter-layer SWAPs, 
 \begin{equation}
-N_{\text{SWAP}}^{(3\text{d})} = 6L^{2}(L-1)\mathcal{F}.
+    N_{\text{SWAP}}^{(3\text{d})} = 6L^{2}(L-1)\mathcal{F}.
 \end{equation}
-In general, a $d$-dimensional LGT mapped onto either local architecture in
-this way requires $\mathcal{O}(L^d)$ SWAP gates per Trotter step.  The square
-and heavy-hex layouts share this volume scaling, while their coordination
-numbers, graph distances, and available embeddings determine different
-prefactors.  Nighthawk's square lattice more closely realizes the assumptions
-behind the explicit counts above, while heavy-hex estimates should be obtained
-from a specified layout or transpilation rather than by assigning a universal
-replacement prefactor.
+In general, a $d$-dimensional LGT mapped onto either local architecture in this way requires $\mathcal{O}(L^d)$ SWAP gates per Trotter step.  
+The square and heavy-hex layouts share this volume scaling, while their coordination numbers, graph distances, and available embeddings determine different prefactors.  
+Nighthawk's square lattice more closely realizes the assumptions behind the explicit counts above, while heavy-hex estimates should be obtained from a specified layout or transpilation rather than by assigning a universal replacement prefactor.
 
-These estimates further assume nearest-neighbor interactions, an
-optimistic ansatz: improved LGT
-Hamiltonians~\cite{Carena:2022kpg,Gustafson:2023aai,Ciavarella:2023mfc,Illa:2025dou,Illa:2025njz}
-and domain-wall or overlap fermions for chiral gauge
-theories~\cite{Clancy:2023kla,Singh:2025sye,Lamm:2026qsp} both require beyond
-nearest-neighbor couplings.
+These estimates further assume nearest-neighbor interactions, an optimistic ansatz: improved LGT Hamiltonians~\cite{Carena:2022kpg,Gustafson:2023aai,Ciavarella:2023mfc,Illa:2025dou,Illa:2025njz} and domain-wall or overlap fermions for chiral gauge theories~\cite{Clancy:2023kla,Singh:2025sye,Lamm:2026qsp} both require beyond nearest-neighbor couplings.
 
 
 \section{Basics of circuit knitting}
 \label{sec:knitting}
 Circuit knitting is a hybrid quantum–classical technique that enables non-local gates to be simulated by sampling a set of local
-operations with a quasi-probability distribution~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}. Each subcircuit can be run independently on a quantum processor with reduced connectivity, and the results are then “knitted” back together using classical post-processing methods. The required operations are projective measurement of a qubit in Pauli basis, and single qubit rotations. The decomposition used here contains six terms per cut CNOT, producing $6^k$ subcircuits for $k$ independently cut CNOTs. Separately, the quasiprobability estimator has a sampling overhead of approximately $\mathcal{O}(9^k/\delta^2)$ to obtain an expectation value with statistical error $\delta$.
+operations with a quasi-probability distribution~\cite{PhysRevLett.125.150504,Mitarai:2019vae,Piveteau:2021jup,Mitarai:2021sud}. Each subcircuit can be run independently on a quantum processor with reduced connectivity, and the results are then “knitted” back together using classical post-processing methods. The required operations are projective measurement of a qubit in Pauli basis, and single qubit rotations. The decomposition used here contains six terms per cut CNOT, producing $6^k$ subcircuits for $k$ independently cut CNOTs. Separately, the quasiprobability estimator has a sampling overhead of approximately $\mathcal{O}(9^k/\delta^2)$ to obtain an expectation value with statistical error $\delta$. {\color{red}(Peter: should we cite something for the scaling behavior?)}
 
-In~\cite{Mitarai:2019vae}, they demonstrate how to decompose the CZ gate into single-qubit rotations and projective measurements. This result can be applied to the CNOT simply by applying two Hadamards. Alternatively, using the exponential form 
+{\color{magenta} Mike: yes! This is the most important number in the paper and if the answer is really that cost goes like $9^k$ in a stochastic version (if that's what that means..) aren't we making quantum simulation exponentially hard again? Only going a few number of trotter steps forever seems like a severe limitation, no?}
+
+{\color{red}(Peter: this should be explained more/better)}
+In Ref.~\cite{Mitarai:2019vae}, the decomposition of a CZ gate into single-qubit rotations and projective measurements is demonstrated. 
+This result can be applied to the CNOT simply by applying two Hadamards. 
+Alternatively, using the exponential form 
 \begin{equation}
-CNOT=e^{i\frac{\pi}{4}(I-Z)(I-X)}= e^{-i\frac{\pi}{4}(I\otimes X)}e^{-i\frac{\pi}{4}(Z\otimes I)}e^{i\frac{\pi}{4}(Z\otimes X)},
+\begin{split}
+    CNOT=&e^{i\frac{\pi}{4}(I-Z)(I-X)} \\
+    =& e^{-i\frac{\pi}{4}(I\otimes X)}e^{-i\frac{\pi}{4}(Z\otimes I)}e^{i\frac{\pi}{4}(Z\otimes X)},
+\end{split}
 \end{equation}
 one sees that the CNOT gate can be represented as two single-qubit rotations circuits and one multi-qubit gate. Following Fig. 2 in Ref.~\cite{Mitarai:2019vae}, this form can be represented as a sum of circuits seen in Fig.~\ref{fig:knitted_circuit}.
 \begin{figure*}
-\includegraphics[width=\linewidth]{figures/cnot_circuit_knitting.pdf}
-\caption{Single-qubit decomposition of the CNOT gate.}
-\label{fig:knitted_circuit}
+    \includegraphics[width=\linewidth]{figures/cnot_circuit_knitting.pdf}
+    \caption{Single-qubit decomposition of the CNOT gate.}
+    \label{fig:knitted_circuit}
 \end{figure*}
 
 In practice, implementing these circuits then becomes a matter of straightforward book-keeping.  The first two terms, corresponding to unentangled pairs of single-qubit gates simply replace the CNOT in any circuit. For the projective measurements $\frac{I+\alpha_{1} Z}{2}$ and $\frac{I+\alpha_{2}X}{2}$, we perform a measurement in the correct basis, and add a count to the specific case. For example, for $\frac{I+\alpha_{1} Z}{2}$ we measuring either the $\ket{\uparrow}$ counts or $\ket{\downarrow}$ counts depending on the value of $\alpha_{1}$. $\frac{I+\alpha_{2}X}{2}$ is performed simply by applying a Hadamard gate to the second qubit and performing a measurement.
@@ -654,7 +715,7 @@ periodic edge~\cite{ibm-processor-types}.
     results without knitting and squares denote results with knitting. Soft dashed lines
     separate the regions with zero, one, and two Trotter steps, labeled by $N_t$. The
     black curve is the noiseless fixed-step result at $\epsilon=0.05$.  Colored curves and bands show
-    the primary weighted fits and their 68\% parametric-bootstrap intervals.}
+    the primary weighted fits and their 68\% parametric-bootstrap intervals. {\color{magenta} Mike: explain resampling details, is this empirical bootstrap intervals after some sampling definition}}
     \label{fig:knitting-time-evolution}
 \end{figure*}
 
