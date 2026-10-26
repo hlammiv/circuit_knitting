@@ -282,20 +282,25 @@ The states $|\Omega(N_s)\rangle$ and $|P(N_s)\rangle$ are defined for lattices o
   \begin{split}
     \label{eq:compstates}
     % &{\color{red}\cancel{|\Omega(N_s)\rangle = \left(\prod_{n=\text{even}}^{N_2-2\delta_{OBC}}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1},}} \\
-    |\Omega(N_s)\rangle &= \left(\prod_{n=\text{even}}^{N}H_{n,n+1}X_{n+1}\right)\ket{0}^{\otimes 2N_s-1},  \\
-    |P(N_s)\rangle &= X_m\sigma_{m,m+1}X_{n+1}\ket{\Omega(N_s)}.
+    |\Omega(N_s)\rangle &= \Big(\prod_{n\ \text{odd}}X_{n}\Big)\Big(\prod_{\text{links}\ (n,n+1)}H_{n,n+1}\Big)\ket{0}^{\otimes (N_s+N)},  \\
+    |P(N_s)\rangle &= X_m\sigma^z_{m,m+1}X_{m+1}\ket{\Omega(N_s)}.
   \end{split}
 \end{equation}
 where
 \begin{equation}
     N = \left\{
     \begin{array}{l@{\,,\,}l}
-        N_{s} - 2 & \text{OBC} \\
+        N_{s} - 1 & \text{OBC} \\
         N_{s}     & \text{PBC}
     \end{array}
     \right.
 \end{equation}
-where $H$ is the Hadamard gate and $m=N_s/2-1$ is the center lattice site.
+is the number of links, $H$ is the Hadamard gate acting on every link, and $m=N_s/2-1$ is the center lattice site.
+% 2026-10-26: the product formerly ran over even n only (H on every other link) and the
+% state-preparation circuit (Fig. 2, functions.ipynb) carried a spurious X on link
+% sigma_{m,m+1}.  That circuit prepared Z_{m,m+1} X_{m+1}|phi>, orthogonal to |phi> and in
+% the Gauss-law sector with a static charge at site m.  Both are now fixed; Sec. V data
+% must be regenerated (scripts/rerun_sec5.py).
 The circuit to build this state from the computational $|0....0\rangle$ state for $N_s=6$ is given in the left of Fig. \ref{fig:circs}.
 
 In general, the object of interest in quantum simulations of LGTs are correlation functions 
