@@ -95,7 +95,29 @@ def load_notebook_functions():
     missing = [name for name in wanted if name not in namespace]
     if missing:
         raise RuntimeError(f"functions.ipynb is missing {missing}")
+    namespace["bootstrap_error"] = bootstrap_error
     return namespace
+
+
+def bootstrap_error(counts, mid, shots, seed=1, resamples=100):
+    """Vectorised version of the notebook's bootstrap_error.
+
+    The notebook draws ``shots`` bitstrings 100 times in a Python loop, which
+    costs about a minute per point at 1024**2 shots.  Only the signed
+    fraction of strings with bit ``mid+1`` set enters the estimate, so the
+    resample reduces to a multinomial over three categories: positive-count
+    strings with the bit set, negative-count strings with the bit set, and
+    the rest.  Same statistics, no Python loop.
+    """
+    rng = np.random.default_rng(seed)
+    weights = np.array([abs(c) for c in counts.values()], dtype=float)
+    weights /= weights.sum()
+    bit = np.array([s[mid + 1] == "1" for s in counts])
+    negative = np.array([c < 0 for c in counts.values()])
+    p = [weights[bit & ~negative].sum(), weights[bit & negative].sum()]
+    p.append(max(0.0, 1.0 - sum(p)))
+    draws = rng.multinomial(shots, p, size=resamples)
+    return float(np.std((draws[:, 0] - draws[:, 1]) / shots))
 
 
 def knitter():
