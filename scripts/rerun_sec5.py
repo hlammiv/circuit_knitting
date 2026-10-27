@@ -22,6 +22,7 @@ Usage (from the repository root):
     python scripts/rerun_sec5.py --stage noiseless
     python scripts/rerun_sec5.py --stage noisy
     python scripts/rerun_sec5.py --stage knitted          # the slow one
+    python scripts/rerun_sec5.py --stage knitted --seeds 20261126 20261127 --threads 4   # one worker
     python scripts/rerun_sec5.py --stage figures
     python scripts/rerun_sec5.py --benchmark              # time one run of each kind
 """
@@ -29,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pickle
 import subprocess
 import sys
@@ -58,6 +60,9 @@ NOISY_SEEDS = [20261026 + i for i in range(10)]
 KNIT_SEEDS = [20261126 + i for i in range(10)]
 # The batched knitting engine fixes compilation across replicas (main.py).
 KNIT_TRANSPILER_SEED = 20260819
+# Aer thread cap for this process (0 = all cores); set by --threads so several
+# workers can share a machine.  Also exported as OMP_NUM_THREADS before Aer loads.
+THREADS = 0
 
 # Time grid of Figs. 6 and 7: t = 0, 0.2, ..., 1.6 with 0, 1, 1, 1, 1, 2, 2, 2, 2
 # Trotter steps, i.e. epsilon = t for one step and t/2 for two.
@@ -124,7 +129,10 @@ def knitter():
     sys.path.insert(0, str(ROOT))
     from improved.config import ExperimentConfig
     from improved.experiment import circuit_knitter
-    return ExperimentConfig, circuit_knitter
+
+    def make_config():
+        return ExperimentConfig(noise=True, num_shots=NOISY_SHOTS, max_parallel_threads=THREADS)
+    return make_config, circuit_knitter
 
 
 def circuit_for(fn, steps, epsilon, mass):
@@ -209,9 +217,9 @@ def knit_path(steps, epsilon, seed):
 
 def stage_knitted(fn, force, seeds):
     """main.py + plot_data.ipynb cell 17: knitted noisy runs, ten replicas."""
-    ExperimentConfig, circuit_knitter = knitter()
+    make_config, circuit_knitter = knitter()
     KNIT_DIR.mkdir(exist_ok=True)
-    config = ExperimentConfig(noise=True, num_shots=NOISY_SHOTS)
+    config = make_config()
     for seed in seeds:
         np.random.seed(seed)
         for steps, epsilon in [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]:
@@ -225,11 +233,19 @@ def stage_knitted(fn, force, seeds):
             pickle.dump(res["results"], open(path, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
             print(f"  {path.name}: value {fn['fermion_number'](res['results'], MID):.4f}  ({time.time() - t0:.0f} s)", flush=True)
     with open(KNIT_DIR / "noisy_knitted_seeds_list.txt", "w") as stream:
-        stream.writelines(f"{s}\n" for s in seeds)
+        stream.writelines(f"{s}\n" for s in KNIT_SEEDS)
+    # Replicas may be split over several workers/machines (--seeds); assemble
+    # only once every replica's eight runs are on disk.
+    missing = [knit_path(s, e, seed).name for seed in KNIT_SEEDS
+               for s, e in [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]
+               if not knit_path(s, e, seed).exists()]
+    if missing:
+        print(f"  {len(missing)} of {8 * len(KNIT_SEEDS)} knitted runs still missing; assembly deferred "
+              f"(rerun --stage knitted once all replicas are done)"); return
 
     # Assemble per-replica series; the t=0 point is an un-knitted noisy run.
     runs = {}
-    for seed in seeds:
+    for seed in KNIT_SEEDS:
         np.random.seed(seed)
         np.random.seed(np.random.randint(1024 ** 2))
         res0 = fn["do_run"](circuit_for(fn, 0, 0.0, MASS), NOISY_SHOTS, noise=True,
@@ -254,11 +270,11 @@ def stage_figures():
 
 
 def benchmark(fn):
-    ExperimentConfig, circuit_knitter = knitter()
+    make_config, circuit_knitter = knitter()
     c = circuit_for(fn, 1, 0.4, MASS)
     t0 = time.time(); fn["do_run"](c, NOISELESS_SHOTS); print(f"  noiseless, {NOISELESS_SHOTS} shots: {time.time() - t0:.1f} s")
     t0 = time.time(); fn["do_run"](c, NOISY_SHOTS, noise=True, simulator_seed=1, transpiler_seed=1); print(f"  noisy no-knit: {time.time() - t0:.1f} s")
-    t0 = time.time(); r = circuit_knitter(c, *CUT, NOISY_SHOTS, ExperimentConfig(noise=True, num_shots=NOISY_SHOTS),
+    t0 = time.time(); r = circuit_knitter(c, *CUT, NOISY_SHOTS, make_config(),
                                            simulator_seed=1, transpiler_seed=KNIT_TRANSPILER_SEED)
     print(f"  noisy knitted, 1 step ({r.get('num_cnots')} cut CNOTs): {time.time() - t0:.1f} s")
     print("  per stage: noiseless = 9 series x (33+9+9)/3 pts; noisy = 90 runs; knitted = 40 one-step + 40 two-step runs,\n"
@@ -271,7 +287,14 @@ def main():
     parser.add_argument("--benchmark", action="store_true")
     parser.add_argument("--force", action="store_true", help="recompute even if outputs exist")
     parser.add_argument("--seeds", type=int, nargs="*", help="knitted stage only: subset of replicas to run")
+    parser.add_argument("--threads", type=int, default=0,
+                        help="Aer threads for this process (default 0 = all cores); use with --seeds to run "
+                             "several workers side by side")
     args = parser.parse_args()
+    global THREADS
+    THREADS = args.threads
+    if THREADS:
+        os.environ["OMP_NUM_THREADS"] = str(THREADS)
     if not args.stage and not args.benchmark:
         parser.error("give --stage or --benchmark")
     fn = load_notebook_functions()
