@@ -97,9 +97,10 @@ def make_figure(data_dir: Path, output: Path) -> None:
         xlabel=r"$t$",
         ylabel=r"$\langle N_f\rangle$",
     )
-    add_trotter_regions(ax, ylim=(0.497, 0.552), label_y=0.98)
+    # y range follows the data (the post-2026-10-26 state swings over ~0.15).
+    add_trotter_regions(ax, label_y=0.98)
     add_parameter_box(ax, r"$m=1.125$", y=0.87)
-    ax.legend(loc="lower right")
+    ax.legend(loc="lower left")
     fig.tight_layout()
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output)

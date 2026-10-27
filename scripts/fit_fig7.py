@@ -551,8 +551,9 @@ def make_figure(
         xlabel=r"$t$",
         ylabel=r"$\langle N_f\rangle$",
     )
-    add_trotter_regions(ax, ylim=(0.475, 0.585), left=-0.10)
-    ax.legend(ncol=3, fontsize=8, loc="lower center")
+    # y range follows the data (the post-2026-10-26 state swings over ~0.15).
+    add_trotter_regions(ax, left=-0.10)
+    ax.legend(ncol=3, fontsize=8, loc="lower left")
     fig.tight_layout()
     fig.savefig(output, bbox_inches="tight")
     plt.close(fig)
