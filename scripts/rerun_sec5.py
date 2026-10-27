@@ -22,7 +22,7 @@ Usage (from the repository root):
     python scripts/rerun_sec5.py --stage noiseless
     python scripts/rerun_sec5.py --stage noisy
     python scripts/rerun_sec5.py --stage knitted          # the slow one
-    python scripts/rerun_sec5.py --stage knitted --seeds 20261126 20261127 --threads 4   # one worker
+    python scripts/rerun_sec5.py --stage knitted --seeds 20261126 --runs 6 7 --threads 2   # one worker
     python scripts/rerun_sec5.py --stage figures
     python scripts/rerun_sec5.py --benchmark              # time one run of each kind
 """
@@ -215,15 +215,24 @@ def knit_path(steps, epsilon, seed):
     return KNIT_DIR / f"step{steps}_epsilon0{str(epsilon)[-1]}_count{NOISY_SHOTS}_with_noise_knitted_seed{seed}.pkl"
 
 
-def stage_knitted(fn, force, seeds):
-    """main.py + plot_data.ipynb cell 17: knitted noisy runs, ten replicas."""
+KNIT_RUNS = [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]
+
+
+def stage_knitted(fn, force, seeds, runs=None):
+    """main.py + plot_data.ipynb cell 17: knitted noisy runs, ten replicas.
+
+    ``runs`` (indices into KNIT_RUNS) lets two workers share one replica; the
+    simulator seeds are drawn in the same order whichever runs a worker does.
+    """
     make_config, circuit_knitter = knitter()
     KNIT_DIR.mkdir(exist_ok=True)
     config = make_config()
     for seed in seeds:
         np.random.seed(seed)
-        for steps, epsilon in [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]:
+        for index, (steps, epsilon) in enumerate(KNIT_RUNS):
             sim_seed, _ = np.random.randint(1024 ** 2), np.random.randint(1024 ** 2)
+            if runs is not None and index not in runs:
+                continue
             path = knit_path(steps, epsilon, seed)
             if path.exists() and not force:
                 print(f"  {path.name}: exists"); continue
@@ -236,8 +245,7 @@ def stage_knitted(fn, force, seeds):
         stream.writelines(f"{s}\n" for s in KNIT_SEEDS)
     # Replicas may be split over several workers/machines (--seeds); assemble
     # only once every replica's eight runs are on disk.
-    missing = [knit_path(s, e, seed).name for seed in KNIT_SEEDS
-               for s, e in [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]
+    missing = [knit_path(s, e, seed).name for seed in KNIT_SEEDS for s, e in KNIT_RUNS
                if not knit_path(s, e, seed).exists()]
     if missing:
         print(f"  {len(missing)} of {8 * len(KNIT_SEEDS)} knitted runs still missing; assembly deferred "
@@ -250,8 +258,7 @@ def stage_knitted(fn, force, seeds):
         np.random.seed(np.random.randint(1024 ** 2))
         res0 = fn["do_run"](circuit_for(fn, 0, 0.0, MASS), NOISY_SHOTS, noise=True,
                             simulator_seed=np.random.randint(1024 ** 2), transpiler_seed=np.random.randint(1024 ** 2))
-        series = [res0] + [pickle.load(open(knit_path(s, e, seed), "rb"))
-                           for s, e in [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]]
+        series = [res0] + [pickle.load(open(knit_path(s, e, seed), "rb")) for s, e in KNIT_RUNS]
         runs[seed] = {"fermion_number": np.array([fn["fermion_number"](r, MID) for r in series]),
                       "bootstrap_error": np.array([fn["bootstrap_error"](r, MID, NOISY_SHOTS) for r in series])}
     pickle.dump(runs, open(DATA / "noisy_knitted_trotter_evolution.pkl", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
@@ -287,6 +294,9 @@ def main():
     parser.add_argument("--benchmark", action="store_true")
     parser.add_argument("--force", action="store_true", help="recompute even if outputs exist")
     parser.add_argument("--seeds", type=int, nargs="*", help="knitted stage only: subset of replicas to run")
+    parser.add_argument("--runs", type=int, nargs="*", choices=range(8),
+                        help="knitted stage only: which of the eight (steps, epsilon) runs per replica "
+                             "(0-3 one-step, 4-7 two-step; default all)")
     parser.add_argument("--threads", type=int, default=0,
                         help="Aer threads for this process (default 0 = all cores); use with --seeds to run "
                              "several workers side by side")
@@ -305,7 +315,7 @@ def main():
         print(f"== {stage}", flush=True)
         if stage == "noiseless": stage_noiseless(fn, args.force)
         elif stage == "noisy": stage_noisy(fn, args.force)
-        elif stage == "knitted": stage_knitted(fn, args.force, args.seeds or KNIT_SEEDS)
+        elif stage == "knitted": stage_knitted(fn, args.force, args.seeds or KNIT_SEEDS, args.runs)
         else: stage_figures()
 
 

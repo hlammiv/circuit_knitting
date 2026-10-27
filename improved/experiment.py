@@ -366,7 +366,10 @@ def circuit_knitter(
                 started = time.perf_counter()
                 transpiled = pass_manager.run(assembled[start:stop])
                 transpile_seconds += time.perf_counter() - started
-                temporary = cache_path.with_suffix(".tmp")
+                # Several worker processes may compile the same batch at once;
+                # a per-process temporary name keeps the rename atomic and
+                # the last writer's (identical) file wins.
+                temporary = cache_path.with_name(f"{cache_path.name}.{os.getpid()}.tmp")
                 with temporary.open("wb") as stream:
                     pickle.dump(transpiled, stream, protocol=pickle.HIGHEST_PROTOCOL)
                 os.replace(temporary, cache_path)
@@ -382,7 +385,7 @@ def circuit_knitter(
                 batch_results.extend(
                     result.data.c.get_counts() for result in primitive_results
                 )
-            temporary = checkpoint_path.with_suffix(".tmp")
+            temporary = checkpoint_path.with_name(f"{checkpoint_path.name}.{os.getpid()}.tmp")
             with temporary.open("wb") as stream:
                 pickle.dump(batch_results, stream, protocol=pickle.HIGHEST_PROTOCOL)
             os.replace(temporary, checkpoint_path)
