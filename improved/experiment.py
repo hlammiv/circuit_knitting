@@ -22,8 +22,10 @@ from collections import defaultdict
 
 try:
     from .config import ExperimentConfig
+    from .exact_sampling import exact_term_counts
 except ImportError:
     from config import ExperimentConfig
+    from exact_sampling import exact_term_counts
 
 
 def _make_backend(noise: bool):
@@ -344,7 +346,10 @@ def circuit_knitter(
     ).hexdigest()
     run_identity = hashlib.sha256(
         pickle.dumps(
-            (compilation_identity, num_shots, simulator_seed),
+            (compilation_identity, num_shots, simulator_seed)
+            # The transpiled circuits are the same on both paths, so the
+            # compilation cache is shared; only the sampled counts differ.
+            + (("exact_sampling", 1) if config.exact_sampling else ()),
             protocol=pickle.HIGHEST_PROTOCOL,
         )
     ).hexdigest()
@@ -356,6 +361,8 @@ def circuit_knitter(
     raw_results = [None] * len(assembled)
     transpile_seconds = 0.0
     execute_seconds = 0.0
+    exact_sampling_log = []
+    noise_model = getattr(backend.options, "noise_model", None) if config.noise else None
     for batch_number, start in enumerate(range(0, len(assembled), batch_size)):
         stop = min(start + batch_size, len(assembled))
         checkpoint_path = checkpoint_dir / f"batch-{batch_number:05d}.pkl"
@@ -380,16 +387,34 @@ def circuit_knitter(
                 os.replace(temporary, cache_path)
 
             batch_results = []
-            for execution_start in range(0, len(transpiled), config.execution_batch_size):
-                execution_stop = execution_start + config.execution_batch_size
-                started = time.perf_counter()
-                primitive_results = sampler.run(
-                    transpiled[execution_start:execution_stop], shots=num_shots
-                ).result()
-                execute_seconds += time.perf_counter() - started
-                batch_results.extend(
-                    result.data.c.get_counts() for result in primitive_results
-                )
+            if config.exact_sampling:
+                for offset, term_circuit in enumerate(transpiled):
+                    started = time.perf_counter()
+                    counts, info = exact_term_counts(
+                        term_circuit,
+                        num_cx,
+                        circuit.num_qubits,
+                        noise_model,
+                        shots=num_shots,
+                        # One stream per term; Aer would seed every job alike.
+                        seed=[simulator_seed, start + offset],
+                        threads=config.max_parallel_threads,
+                        min_split_ops=config.exact_sampling_min_split_ops,
+                    )
+                    execute_seconds += time.perf_counter() - started
+                    exact_sampling_log.append(dict(term=start + offset, **info))
+                    batch_results.append(counts)
+            else:
+                for execution_start in range(0, len(transpiled), config.execution_batch_size):
+                    execution_stop = execution_start + config.execution_batch_size
+                    started = time.perf_counter()
+                    primitive_results = sampler.run(
+                        transpiled[execution_start:execution_stop], shots=num_shots
+                    ).result()
+                    execute_seconds += time.perf_counter() - started
+                    batch_results.extend(
+                        result.data.c.get_counts() for result in primitive_results
+                    )
             temporary = checkpoint_path.with_name(f"{checkpoint_path.name}.{os.getpid()}.tmp")
             with temporary.open("wb") as stream:
                 pickle.dump(batch_results, stream, protocol=pickle.HIGHEST_PROTOCOL)
@@ -424,6 +449,8 @@ def circuit_knitter(
             'transpile_seconds': transpile_seconds,
             'execution_batch_size': config.execution_batch_size,
             'execute_seconds': execute_seconds,
+            'sampling': 'exact_branch_enumeration' if config.exact_sampling else 'aer_shots',
+            'exact_sampling_terms': exact_sampling_log,
         },
     }
 

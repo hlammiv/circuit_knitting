@@ -76,6 +76,11 @@ KNIT_TRANSPILER_SEED = 20260819
 # Aer thread cap for this process (0 = all cores); set by --threads so several
 # workers can share a machine.  Also exported as OMP_NUM_THREADS before Aer loads.
 THREADS = 0
+# --exact-sampling: per-term exact outcome distributions by density-matrix
+# branch enumeration instead of Aer's per-shot trajectories (same statistics,
+# different random stream; see ExperimentConfig.exact_sampling).  Outputs go
+# to a separate directory so the shot-sampled data are never overwritten.
+EXACT_SAMPLING = False
 
 # Time grid of Figs. 6 and 7: t = 0, 0.2, ..., 1.6 with 0, 1, 1, 1, 1, 2, 2, 2, 2
 # Trotter steps, i.e. epsilon = t for one step and t/2 for two.
@@ -146,8 +151,10 @@ def knitter():
     def make_config():
         if LAYOUT == "line":
             return ExperimentConfig(noise=True, num_shots=NOISY_SHOTS, max_parallel_threads=THREADS,
-                                    optimization_level=3, initial_layout=line_layout())
-        return ExperimentConfig(noise=True, num_shots=NOISY_SHOTS, max_parallel_threads=THREADS)
+                                    optimization_level=3, initial_layout=line_layout(),
+                                    exact_sampling=EXACT_SAMPLING)
+        return ExperimentConfig(noise=True, num_shots=NOISY_SHOTS, max_parallel_threads=THREADS,
+                                exact_sampling=EXACT_SAMPLING)
     return make_config, circuit_knitter
 
 
@@ -371,6 +378,9 @@ def main():
     parser.add_argument("--layout", choices=["free", "line"], default="free",
                         help="free: transpiler chooses the qubits (default); line: both circuits pinned "
                              "to the same straight 12-qubit line at level 3 (outputs get a _line suffix)")
+    parser.add_argument("--exact-sampling", action="store_true",
+                        help="knitted stage: exact per-term distributions by branch enumeration "
+                             "(much faster; writes to data/noisy_knitted_trotter_evol*_exact)")
     parser.add_argument("--threads", type=int, default=0,
                         help="Aer threads for this process (default 0 = all cores); use with --seeds to run "
                              "several workers side by side")
@@ -382,6 +392,10 @@ def main():
     if LAYOUT == "line":
         SUFFIX = "_line"; KNIT_DIR = DATA / "noisy_knitted_trotter_evol_line"
         print(f"  pinned line layout: {line_layout()}", flush=True)
+    global EXACT_SAMPLING
+    EXACT_SAMPLING = args.exact_sampling
+    if EXACT_SAMPLING:
+        SUFFIX += "_exact"; KNIT_DIR = KNIT_DIR.with_name(KNIT_DIR.name + "_exact")
     if THREADS:
         os.environ["OMP_NUM_THREADS"] = str(THREADS)
     if not args.stage and not args.benchmark:

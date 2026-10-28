@@ -28,6 +28,19 @@ class ExperimentConfig:
     cache_dir: str = ".cache/circuit_knitting"
     checkpoint_dir: str = "checkpoints/circuit_knitting"
     resume: bool = True
+    # Knitting terms with a mid-circuit measurement defeat Aer's end-of-circuit
+    # shot sampling, so with a noise model every shot becomes a separate
+    # statevector trajectory.  With exact_sampling the exact outcome
+    # distribution of every term is computed instead by density-matrix branch
+    # enumeration (improved/exact_sampling.py) and the shots are drawn from it
+    # multinomially: same statistics as Aer's own sampling, a different random
+    # stream.  Off by default; checkpoints of the two paths are kept apart.
+    exact_sampling: bool = False
+    # A mid-circuit measurement splits the branch tree only when at least this
+    # many gates have run since the previous split; shorter segments are
+    # replayed per outcome instead of saving and restoring the density matrix.
+    # Performance only, the result does not depend on it.
+    exact_sampling_min_split_ops: int = 32
 
 
 def get_config() -> ExperimentConfig:
