@@ -331,6 +331,7 @@ def circuit_knitter(
     # must not enter the identity, or caches and checkpoints written by one
     # process are never found by another and resume never works.
     identity_circuit = circuit.copy(name="knit-input")
+    identity_circuit._base_name = "knit-input"   # copy(name=...) leaves the counter here
     compilation_identity = hashlib.sha256(
         pickle.dumps(
             (
