@@ -309,10 +309,12 @@ def circuit_knitter(
             )
         except (AttributeError, TypeError):
             pass
+    initial_layout = list(config.initial_layout) if config.initial_layout is not None else None
     pass_manager = generate_preset_pass_manager(
         optimization_level=config.optimization_level,
         backend=backend,
         seed_transpiler=transpiler_seed,
+        initial_layout=initial_layout,
     )
     sampler = SamplerV2(
         backend,
@@ -333,7 +335,10 @@ def circuit_knitter(
                 config.optimization_level,
                 transpiler_seed,
                 versions,
-            ),
+            )
+            # Only a pinned layout enters the identity, so caches written
+            # before this field existed stay valid.
+            + ((tuple(initial_layout),) if initial_layout is not None else ()),
             protocol=pickle.HIGHEST_PROTOCOL,
         )
     ).hexdigest()

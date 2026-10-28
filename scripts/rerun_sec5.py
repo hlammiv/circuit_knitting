@@ -25,6 +25,17 @@ Usage (from the repository root):
     python scripts/rerun_sec5.py --stage knitted --seeds 20261126 --runs 6 7 --threads 2   # one worker
     python scripts/rerun_sec5.py --stage figures
     python scripts/rerun_sec5.py --benchmark              # time one run of each kind
+
+Layouts (--layout, default free):
+
+  free   the transpiler places the 12 qubits itself (level 3 un-knitted, as in
+         functions.ipynb do_run; level 1 knitted, the knitter default).  On the
+         heavy-hex lattice it folds the ring so that closing it costs ~6 SWAPs.
+  line   both circuits are pinned to the same straight line of 12 physical
+         qubits (the line with the lowest mean CNOT error) at level 3, so the
+         periodic hopping term has to be routed across the whole line.  This
+         models hardware that cannot fold the ring.  Outputs carry a "_line"
+         suffix (data/*_line.*, data/noisy_knitted_trotter_evol_line/).
 """
 from __future__ import annotations
 
@@ -43,6 +54,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 KNIT_DIR = DATA / "noisy_knitted_trotter_evol"
+LAYOUT = "free"            # or "line"; see module docstring and main()
+SUFFIX = ""                # "_line" for the pinned layout
 SCAN_DIR = ROOT / "mass_scan_plot_data"
 
 # Lattice and run parameters shared by every Sec. V result (params.ipynb).
@@ -131,8 +144,64 @@ def knitter():
     from improved.experiment import circuit_knitter
 
     def make_config():
+        if LAYOUT == "line":
+            return ExperimentConfig(noise=True, num_shots=NOISY_SHOTS, max_parallel_threads=THREADS,
+                                    optimization_level=3, initial_layout=line_layout())
         return ExperimentConfig(noise=True, num_shots=NOISY_SHOTS, max_parallel_threads=THREADS)
     return make_config, circuit_knitter
+
+
+_LINE = None
+
+
+def line_layout():
+    """The straight 12-qubit line on FakeWashingtonV2 with the lowest mean CNOT error.
+
+    A line is a shortest path between two qubits at graph distance 11.  Circuit
+    qubit i is pinned to the i-th qubit of the line, so the cut hopping term
+    (qubits 0 and 10) spans ten hops.  Also written to data/line_layout.json.
+    """
+    global _LINE
+    if _LINE is not None:
+        return _LINE
+    import rustworkx as rx
+    from qiskit_ibm_runtime.fake_provider import FakeWashingtonV2
+    backend = FakeWashingtonV2()
+    graph = backend.coupling_map.graph.to_undirected()
+    lengths = rx.all_pairs_dijkstra_path_lengths(graph, lambda _: 1.0)
+
+    def cx_error(a, b):
+        key = (a, b) if (a, b) in backend.target["cx"] else (b, a)
+        return backend.target["cx"][key].error
+
+    lines = []
+    for a in range(backend.num_qubits):
+        for b, d in lengths[a].items():
+            if a < b and d == 2 * N_SITES - 1:
+                path = list(rx.dijkstra_shortest_paths(graph, a, b)[b])
+                lines.append((np.mean([cx_error(path[i], path[i + 1]) for i in range(len(path) - 1)]), path))
+    error, _LINE = min(lines, key=lambda item: (item[0], item[1]))
+    _LINE = [int(q) for q in _LINE]
+    json.dump({"backend": backend.name, "line": _LINE, "mean_cx_error": float(error)},
+              open(DATA / "line_layout.json", "w"), indent=1)
+    return _LINE
+
+
+def run_direct(fn, circuit, num_shots, simulator_seed, transpiler_seed):
+    """Noisy un-knitted run: the notebook's do_run (free layout, level 3) or the
+    same thing pinned to the straight line."""
+    if LAYOUT == "free":
+        return fn["do_run"](circuit, num_shots, noise=True,
+                            simulator_seed=simulator_seed, transpiler_seed=transpiler_seed)
+    from qiskit.transpiler import generate_preset_pass_manager
+    from qiskit_ibm_runtime import SamplerV2
+    from qiskit_ibm_runtime.fake_provider import FakeWashingtonV2
+    backend = FakeWashingtonV2()
+    pass_manager = generate_preset_pass_manager(optimization_level=3, backend=backend,
+                                                seed_transpiler=transpiler_seed, initial_layout=line_layout())
+    sampler = SamplerV2(backend, options={"simulator": {"seed_simulator": simulator_seed}})
+    result = sampler.run([pass_manager.run(circuit)], shots=num_shots).result()[0].data.meas.get_counts()
+    return {key: result[key] for key in sorted(result)}
 
 
 def circuit_for(fn, steps, epsilon, mass):
@@ -185,29 +254,31 @@ def resample(runs, n_points=9):
 
 def stage_noisy(fn, force):
     """plot_data.ipynb make_runs: FakeWashingtonV2, no knitting, ten replicas."""
-    out = DATA / "noisy_no_knit_trotter_evolution.pkl"
+    out = DATA / f"noisy_no_knit_trotter_evolution{SUFFIX}.pkl"
     if out.exists() and not force:
         runs = pickle.load(open(out, "rb")); print("  replicas exist, resampling only")
     else:
         runs = {}
         for seed in NOISY_SEEDS:
-            values, errors = [], []
+            values, errors, counts = [], [], []
             my_seed = seed
             for steps, epsilon in [(0, 0.0)] + [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]:
                 np.random.seed(my_seed)
                 my_seed = np.random.randint(1024 ** 2)
-                res = fn["do_run"](circuit_for(fn, steps, epsilon, MASS), NOISY_SHOTS, noise=True,
-                                   simulator_seed=np.random.randint(1024 ** 2),
-                                   transpiler_seed=np.random.randint(1024 ** 2))
+                res = run_direct(fn, circuit_for(fn, steps, epsilon, MASS), NOISY_SHOTS,
+                                 simulator_seed=np.random.randint(1024 ** 2),
+                                 transpiler_seed=np.random.randint(1024 ** 2))
                 values.append(fn["fermion_number"](res, MID))
                 errors.append(fn["bootstrap_error"](res, MID, NOISY_SHOTS))
-            runs[seed] = {"fermion_number": np.array(values), "bootstrap_error": np.array(errors)}
+                counts.append(res)
+            # counts are kept so other sites can be analysed without rerunning
+            runs[seed] = {"fermion_number": np.array(values), "bootstrap_error": np.array(errors), "counts": counts}
             print(f"  seed {seed}: {np.round(values, 3)}", flush=True)
         pickle.dump(runs, open(out, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     np.random.seed(0)
     mean, err = resample(runs)
-    np.save(DATA / "no_knit_noisy_resampled_fermion_number.npy", mean)
-    np.save(DATA / "no_knit_noisy_resampled_bootstrap_error.npy", err)
+    np.save(DATA / f"no_knit_noisy_resampled_fermion_number{SUFFIX}.npy", mean)
+    np.save(DATA / f"no_knit_noisy_resampled_bootstrap_error{SUFFIX}.npy", err)
     print("  resampled:", np.round(mean, 4))
 
 
@@ -256,16 +327,16 @@ def stage_knitted(fn, force, seeds, runs=None):
     for seed in KNIT_SEEDS:
         np.random.seed(seed)
         np.random.seed(np.random.randint(1024 ** 2))
-        res0 = fn["do_run"](circuit_for(fn, 0, 0.0, MASS), NOISY_SHOTS, noise=True,
-                            simulator_seed=np.random.randint(1024 ** 2), transpiler_seed=np.random.randint(1024 ** 2))
+        res0 = run_direct(fn, circuit_for(fn, 0, 0.0, MASS), NOISY_SHOTS,
+                          simulator_seed=np.random.randint(1024 ** 2), transpiler_seed=np.random.randint(1024 ** 2))
         series = [res0] + [pickle.load(open(knit_path(s, e, seed), "rb")) for s, e in KNIT_RUNS]
         runs[seed] = {"fermion_number": np.array([fn["fermion_number"](r, MID) for r in series]),
                       "bootstrap_error": np.array([fn["bootstrap_error"](r, MID, NOISY_SHOTS) for r in series])}
-    pickle.dump(runs, open(DATA / "noisy_knitted_trotter_evolution.pkl", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(runs, open(DATA / f"noisy_knitted_trotter_evolution{SUFFIX}.pkl", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     np.random.seed(0)
     mean, err = resample(runs)
-    np.save(DATA / "knitted_noisy_resampled_fermion_number.npy", mean)
-    np.save(DATA / "knitted_noisy_resampled_bootstrap_error.npy", err)
+    np.save(DATA / f"knitted_noisy_resampled_fermion_number{SUFFIX}.npy", mean)
+    np.save(DATA / f"knitted_noisy_resampled_bootstrap_error{SUFFIX}.npy", err)
     print("  resampled:", np.round(mean, 4))
 
 
@@ -297,12 +368,20 @@ def main():
     parser.add_argument("--runs", type=int, nargs="*", choices=range(8),
                         help="knitted stage only: which of the eight (steps, epsilon) runs per replica "
                              "(0-3 one-step, 4-7 two-step; default all)")
+    parser.add_argument("--layout", choices=["free", "line"], default="free",
+                        help="free: transpiler chooses the qubits (default); line: both circuits pinned "
+                             "to the same straight 12-qubit line at level 3 (outputs get a _line suffix)")
     parser.add_argument("--threads", type=int, default=0,
                         help="Aer threads for this process (default 0 = all cores); use with --seeds to run "
                              "several workers side by side")
     args = parser.parse_args()
     global THREADS
     THREADS = args.threads
+    global LAYOUT, SUFFIX, KNIT_DIR
+    LAYOUT = args.layout
+    if LAYOUT == "line":
+        SUFFIX = "_line"; KNIT_DIR = DATA / "noisy_knitted_trotter_evol_line"
+        print(f"  pinned line layout: {line_layout()}", flush=True)
     if THREADS:
         os.environ["OMP_NUM_THREADS"] = str(THREADS)
     if not args.stage and not args.benchmark:

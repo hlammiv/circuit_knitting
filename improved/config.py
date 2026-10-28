@@ -18,6 +18,9 @@ class ExperimentConfig:
     simulator_seed: Optional[int] = None
     transpiler_seed: Optional[int] = None
     optimization_level: int = 1
+    # Physical qubit for each circuit qubit (passed to the transpiler as
+    # initial_layout).  None lets the layout pass choose.
+    initial_layout: Optional[list] = None
     batch_size: int = 1
     execution_batch_size: int = 1
     max_parallel_experiments: int = 1
