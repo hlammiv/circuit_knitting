@@ -327,10 +327,14 @@ def circuit_knitter(
         package: importlib.metadata.version(package)
         for package in ("qiskit", "qiskit-aer", "qiskit-ibm-runtime")
     }
+    # The circuit's auto-generated name ("circuit-N", a process-global counter)
+    # must not enter the identity, or caches and checkpoints written by one
+    # process are never found by another and resume never works.
+    identity_circuit = circuit.copy(name="knit-input")
     compilation_identity = hashlib.sha256(
         pickle.dumps(
             (
-                circuit,
+                identity_circuit,
                 conq,
                 tarq,
                 config.noise,
