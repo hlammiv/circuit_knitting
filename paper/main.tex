@@ -622,12 +622,12 @@ We display the results in Fig.~\ref{fig:trotter_vs_exact} and summarize the extr
 \end{table}
 
 \subsection{Noisy circuit-knitting comparison}
+\label{sec:noisy-knitting}
 
 All noisy results in this subsection are local simulations using the noise
 properties and device topology encoded in
 \textsc{Qiskit's} \texttt{FakeWashingtonV2} representation of the 127-qubit
-\washington{} backend.  Circuits were transpiled at optimization level one
-against the same backend model.  Thus ``noisy'' refers to simulation with the
+\washington{} backend.  Thus ``noisy'' refers to simulation with the
 Washington calibration-derived device model, not execution on the physical
 device.
 
@@ -642,113 +642,139 @@ flagship Eagle processors, largely through improved two-qubit control and
 suppressed crosstalk~\cite{ibm-heron-system-two}; a late-2025 Heron r3 system
 reported a best error per layered gate (EPLG) of approximately
 $0.23\%$~\cite{ibm-q4-2025}.  The Washington model therefore remains useful
-for a controlled comparison of knitting with and without a heavy-hex routing
+for a controlled comparison of knitting with and without a routing
 constraint, but likely overstates the absolute noise expected from current
-Heron hardware.  Nighthawk changes the connectivity comparison more
-fundamentally: its degree-four square lattice is closer to the architecture
-assumed in Sec.~\ref{sec:swap} and should reduce routing relative to heavy-hex,
-potentially decreasing the hardware-level advantage obtained by cutting a
-periodic edge~\cite{ibm-processor-types}.
+Heron hardware.
 
-% \begin{figure}
-%     \includegraphics[width=0.48\textwidth]{figures/noiseless_convergence.pdf}
-%     \caption{
-%         Plot of the mean fermion number for 1 and 2 Trotter evolution steps (blue and orange points, respectively) in a noiseless simulation with a spacing of $\epsilon=0.8$.
-%         We observe the knitted results (square markers) to converge to the non-knitted results (circular markers) as the number of shots is increased.
-%         The number of shots displayed on the x-axis is normalized to emphasize convergence.
-%         Error bars represent statistical uncertainties.
-%     }
-% \label{fig:noisy_convergence}
-% \end{figure}
+\noindent\textit{What is compared.}\quad
+Knitting changes one thing in the circuit: the two CNOTs per Trotter step
+that couple the last site to the first through the periodic link are removed
+and replaced by the decomposition of Sec.~\ref{sec:knitting}.  To isolate the
+effect of that change, the un-knitted circuit and every knitted term are
+compiled in the same way.  Both are transpiled at optimization level three,
+and in both the twelve circuit qubits (six staggered sites and the six links
+between them, in lattice order) are assigned to the same straight line of
+twelve physical qubits of the Washington model,
+$\{31,32,36,51,50,49,55,68,69,70,74,89\}$, which is the geodesic of that
+length with the lowest mean calibrated CNOT error ($0.98\%$).  With this
+assignment the two sites joined by the periodic link sit at the two ends of
+the line, ten hops apart.  The un-knitted circuit must therefore carry that
+interaction across the line with SWAP gates in every Trotter step, which is
+the situation a periodic lattice faces on any processor whose connectivity
+does not close the ring; the knitted terms contain no such interaction and
+need no such routing.
 
-% \begin{figure}
-%     \includegraphics[width=0.48\textwidth]{figures/noisy_convergence.pdf}
-%     \caption{
-%         Plot of the mean fermion number for 1 and 2 Trotter evolution steps (blue and orange points, respectively) in a noisy simulation with a spacing of $\epsilon=0.8$.
-%         We observe that in the presence of noise neither the non-knitted results (circular markers) nor the knitted results (square markers) converge to the exact results (dotted lines and error bands taken from the highest statistics non-knitted points of Fig.~\ref{fig:noisy_convergence}).
-%     }
-% \end{figure}
+We note that this is not what the transpiler does when left to choose the
+layout.  On the heavy-hex lattice it folds the twelve-qubit ring onto a path
+whose two ends are adjacent, so that the periodic link costs the un-knitted
+circuit almost nothing, and in that configuration we found the knitted and
+un-knitted results to agree within their uncertainties at every time.  That
+escape is specific to a one-dimensional ring on a sparse lattice: the
+$\mathcal{O}(L^{d-1})$ periodic links of a $d$-dimensional volume cannot all
+be made adjacent, as quantified in Sec.~\ref{sec:swap}.  The pinned-line
+comparison is therefore the representative one, and it is the one shown
+below.
+
+\noindent\textit{Gate counts.}\quad
+Table~\ref{tab:fig7-data} lists the compiled CNOT counts of the circuits
+that were run.  Before compilation the one-step circuit contains 26 CNOTs,
+two of which lie on the periodic link; the two-step circuit contains 50, four
+on the link.  On the line, the un-knitted one-step circuit compiles to 57
+CNOTs, so 31 are routing, and the two-step circuit to $137$--$143$, of which
+$87$--$93$ are routing.  Each knitted term compiles to $30$--$33$ CNOTs at one
+step and $58$--$63$ at two, i.e.\ $6$--$9$ and $10$--$15$ routing CNOTs; these
+remain because the hopping term couples a site to its next-nearest site
+through the intervening link, which a line of qubits cannot host without a
+swap.  Cutting the periodic link thus removes about half of the compiled
+CNOTs at one step and $57\%$ at two.
+
+Not every CNOT influences the measured site.  The observable is the
+occupation of the central site, and only the gates in its causal cone, those
+through which an error can propagate to that qubit before it is read out, can
+bias it.  In the un-knitted circuit the cone contains 47 of the 57 CNOTs at
+one step and 105 of the 143 at two steps; in the knitted terms it contains
+$17$--$21$ of $30$--$33$ and $43$--$49$ of $58$--$63$.  Multiplying the
+calibrated success probabilities of the CNOTs in the cone gives the
+probability that the measured site is reached by no two-qubit error at all:
+$0.65$ without knitting against $0.82$ with it at one step, and $0.32$ against
+$0.62$ at two steps.  Knitting therefore roughly doubles the fraction of
+noise-free two-step circuits seen by the observable.
 
 \begin{figure*}
     \centering
     \includegraphics[width=0.98\textwidth]{figures/fermion_number_with_vs_without_knitting_scatter.pdf}
-    \caption{Time evolution of the mean fermion number without (blue) and
-    with (orange) circuit knitting.  Points and error bars are the resampled
-    central values and one-standard-deviation uncertainties; circles denote
-    results without knitting and squares denote results with knitting. Soft dashed lines
-    separate the regions with zero, one, and two Trotter steps, labeled by $N_t$. The
-    black curve is the noiseless fixed-step result at $\epsilon=0.05$.  Colored curves and bands show
-    the primary weighted fits and their 68\% parametric-bootstrap intervals. {\color{magenta} Mike: explain resampling details, is this empirical bootstrap intervals after some sampling definition}}
+    \caption{Time evolution of the mean fermion number of the central site
+    without (blue circles) and with (orange squares) circuit knitting, both
+    compiled on the same straight line of twelve Washington qubits at
+    optimization level three.  The solid black curve is the noiseless
+    fixed-step result at $\epsilon=0.05$; the dashed black line with crosses
+    is the noiseless result at the same Trotter settings as the noisy points
+    (one step of size $t$, then two steps of size $t/2$), so the distance
+    from a noisy point to the dashed line is the effect of noise alone.  Faint
+    points are the ten individual replicas, each a run with its own simulator
+    seed; the large points and error bars are the mean and standard deviation
+    of a pool of $1000$ Gaussian draws per replica, each draw centred on the
+    replica's value with its shot-resampling (bootstrap) width, so the error
+    bar combines the shot noise within a replica with the scatter between
+    replicas.  Soft dashed lines separate the regions with zero, one, and two
+    Trotter steps, labeled by $N_t$.  Colored dash-dotted curves and bands
+    show the truncated-cosine fits of Eq.~(\ref{eq:trunc_fit}) and their
+    68\% parametric-bootstrap intervals; see the text for why these fits are
+    reported but not used as mass estimates.}
     \label{fig:knitting-time-evolution}
 \end{figure*}
 
 \input{generated/fig7_data_table}
 
-The compiled CNOT counts in Table~\ref{tab:fig7-data} also quantify the
-routing benefit of cutting the periodic link on the Washington heavy-hex
-topology.  For the fixed transpiler seed used in our reproducible reference
-compilation, the one-step circuit decreases from 50 CNOTs without knitting to
-39 CNOTs per knitted term, a 22\% reduction.  Only two of the eleven removed
-CNOTs are the explicitly cut gates; the other nine arise from avoided
-routing.  At two steps the corresponding counts are 104 and 76, a 27\%
-reduction, of which four are cut gates and 24 are avoided routing CNOTs.  The
-absolute routing saving therefore grows approximately with $N_t$, although
-the ranges in Table~\ref{tab:fig7-data} show that its precise value depends on
-the transpiler layout and seed.  These Washington-specific compiled counts
-are distinct from the idealized square-lattice SWAP-network estimates in
-Sec.~\ref{sec:swap}.
+\noindent\textit{Results.}\quad
+Fig.~\ref{fig:knitting-time-evolution} and Table~\ref{tab:fig7-data} compare
+the two noisy series with the noiseless values at the same Trotter settings.
+Noise pushes the occupation toward its fully decohered value of $1/2$ in both
+cases, so the question is how much of the noiseless signal, the distance of
+$\langle N_f\rangle$ from $1/2$, survives.  With one Trotter step the two
+series are indistinguishable: both lie within $0.035$ of the noiseless value
+at every time and within one standard deviation of each other, so at this
+depth knitting neither helps nor hurts.  With two Trotter steps the
+un-knitted circuit retains $48$--$51\%$ of the noiseless signal while the
+knitted circuit retains $66$--$67\%$.  The un-knitted points lie
+$0.086$--$0.111$ above the noiseless values and the knitted points
+$0.060$--$0.073$ above them; the difference between the two series is
+$0.027$--$0.038$ at each of the four two-step times, between $2.3$ and $3.3$
+standard deviations individually and of the same sign at all four, and the
+knitted error bars are no larger than the un-knitted ones.  The reduction in
+the two-step bias, to about two thirds, is the practical benefit of cutting
+the periodic link in this model; it is smaller than the factor of two in the
+cone survival probability above, as expected since single-qubit, readout and
+mid-circuit-measurement errors are not removed by knitting and the knitted
+estimator adds the variance of the quasi-probability reconstruction.
 
-Fig.~\ref{fig:knitting-time-evolution} compares the noisy simulations with
-and without circuit knitting against a noiseless fixed-step reference at
-$\epsilon=0.05$.  This reference is itself a finite-Trotter, finite-shot
-simulation rather than exact Hamiltonian evolution.  The fitted colored data
-add the device-derived noise model and finite-shot fluctuations.
-If noisy CNOTs dominate the uncertainty, the smaller CNOT count in each
-knitted term should reduce the device-noise contribution to the scatter and
-can therefore narrow the associated error bars.  This benefit competes with
-the variance amplification of the quasiprobability reconstruction and its
-finite sampling.  Consequently, fewer compiled CNOTs do not by themselves
-guarantee smaller total knitted error bars.
-
-We fit the same nine time points in each series to both
+\noindent\textit{Fits.}\quad
+For completeness we fit the same nine time points in each series to
 Eqs.~(\ref{eq:trunc_fit}) and~(\ref{eq:full_fit}), using the resampling
-uncertainties as independent absolute weights.  For the truncated model,
-$A$ is the oscillation amplitude, $C$ is the frequency used as the effective
-mass estimator, and $D$ is the mean offset over the fitted window.  Parameter
-uncertainties and differences are obtained from 10,000 parametric-bootstrap
-replicas, in which each time point is independently drawn from a Gaussian
-with its measured central value and resampling uncertainty.  We also fit the
-noiseless fixed-step reference only at these nine times so that comparisons
-use the same limited temporal window rather than a more strongly constrained
-long-time fit.
-
-The five-parameter form is not supported by this short time range: it
-has substantially larger AICc values than the truncated cosine and frequently
-places at least one parameter on a fit boundary.  We therefore use the
-truncated cosine as the primary model.  Table~\ref{tab:fig7-fits} reports all
-three primary-fit parameters; the uncertainty on $C$ is emphasized because it
-is the parameter relevant to the mass comparison.
+uncertainties as independent absolute weights, with parameter uncertainties
+from 10,000 parametric-bootstrap replicas in which each time point is drawn
+from a Gaussian with its central value and uncertainty.  The noiseless
+fixed-step reference is fitted at the same nine times.  The five-parameter
+form is not supported by this short window: its AICc is larger than that of
+the truncated cosine and it places at least one parameter on a fit boundary
+in most bootstrap replicas, so the truncated cosine is the primary model.
+Table~\ref{tab:fig7-fits} reports the results.
 
 \input{generated/fig7_fit_results}
 
-Relative to the matched noiseless fixed-step reference in
-Table~\ref{tab:fig7-fits}, neither the knitted nor the un-knitted frequency
-shift is resolved at 95\% confidence.
-
-The knitted frequency interval is more asymmetric because the knitted data do
-not show a clear turnover within the fitted time range and have larger
-late-time uncertainties.  Bootstrap fluctuations can therefore place the
-maximum beyond the final time point, producing a long low-frequency tail.  In
-contrast, the un-knitted data turn over near $t\simeq1.2$, constraining both
-sides of the frequency distribution.  Correspondingly, 4.61\% of the knitted
-bootstrap fits approach a parameter bound, compared with 0.13\% without
-knitting.  This asymmetry is induced by the short-window nonlinear fit, not by
-asymmetric pointwise measurement errors.
-
-The 95\% bootstrap interval for the frequency difference is
-$-2.370 < \Delta C < 0.425$.  Thus the central values suggest a lower
-frequency after knitting, but the present statistics do not resolve a
-nonzero shift at 95\% confidence.
+The truncated cosine reproduces the noiseless frequency,
+$C=1.837(6)$ against $1.87$ from the long fit of
+Table~\ref{tab:mass_extraction}, but it does not describe either noisy
+series: $\chi^2/\mathrm{dof}=60.7/6$ without knitting and $22.9/6$ with it.
+At this noise level the noisy curves flatten and turn back toward $1/2$
+instead of continuing to oscillate, and the fitted $C$ values of $2.86(6)$
+and $2.51(8)$ measure how quickly each curve flattens, not the meson mass.
+The knitted value is closer to the noiseless one, with a difference between
+the two noisy fits of $\Delta C=-0.35^{+0.09}_{-0.10}$ (95\% interval
+$[-0.54,-0.17]$), consistent with the smaller bias seen point by point, but
+neither series yields a mass estimate without error mitigation.  The gain
+from knitting at this depth is thus in the fidelity of the time series, not
+yet in a converged extraction of the mass.
 
 \section{Conclusions}
 \label{sec:conclusion}
@@ -775,14 +801,20 @@ the potentially exponential circuit-execution and sampling cost of circuit knitt
 attractive in regimes where the cut count $k$ remains modest.
 
 To probe the realistic cost-vs-fidelity tradeoff of circuit knitting in
-this setting, we performed both noiseless and noisy \textsc{Qiskit}
-simulations at $L=4$, cutting the two CNOTs that close the periodic
-boundary in $\mathcal{U}_3$.  The knitted circuits reproduce the
-mean-fermion-number evolution through two full Trotter steps using
-$N_{\mathrm{shots}}=16{,}384$ per sub-circuit for each of ten seeds.  The primary noisy-data fits give a
-knitted-minus-un-knitted frequency difference whose 95\% bootstrap interval
-includes zero (Tab.~\ref{tab:fig7-fits}); the current statistics therefore do
-not resolve a knitting-induced shift.  In our exhaustive implementation,
+this setting, we performed noisy \textsc{Qiskit} simulations of the
+$N_s=6$ (twelve-qubit) system, cutting the two CNOTs per Trotter step that
+close the periodic boundary, with the knitted and un-knitted circuits
+compiled identically onto the same straight line of Washington qubits.  The
+knitted circuits reproduce the mean-fermion-number evolution through two
+full Trotter steps using $N_{\mathrm{shots}}=16{,}384$ per sub-circuit for
+each of ten seeds.  Cutting the periodic link removes $57\%$ of the compiled
+two-step CNOTs and doubles the probability that the measured site is reached
+by no two-qubit error; in the data it reduces the two-step noise bias of the
+central-site occupation to about two thirds of its un-knitted value, a shift
+of $2$--$3$ standard deviations at each two-step time, while one-step results
+are unchanged.  Neither series is clean enough for a mass extraction at this
+noise level, so the benefit is in the fidelity of the time series rather than
+in the extracted mass.  In our exhaustive implementation,
 $k$ cut CNOTs produce $6^k$ decomposition terms.  At fixed shots per term,
 this growth ruled out a third Trotter step within our computational budget:
 three layers require $k=6$, corresponding to $6^6=46{,}656$ subcircuits per

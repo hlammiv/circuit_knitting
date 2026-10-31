@@ -1,0 +1,15 @@
+To probe the realistic cost-vs-fidelity tradeoff of circuit knitting in
+this setting, we performed noisy \textsc{Qiskit} simulations of the
+$N_s=6$ (twelve-qubit) system, cutting the two CNOTs per Trotter step that
+close the periodic boundary, with the knitted and un-knitted circuits
+compiled identically onto the same straight line of Washington qubits.  The
+knitted circuits reproduce the mean-fermion-number evolution through two
+full Trotter steps using $N_{\mathrm{shots}}=16{,}384$ per sub-circuit for
+each of ten seeds.  Cutting the periodic link removes $57\%$ of the compiled
+two-step CNOTs and doubles the probability that the measured site is reached
+by no two-qubit error; in the data it reduces the two-step noise bias of the
+central-site occupation to about two thirds of its un-knitted value, a shift
+of $2$--$3$ standard deviations at each two-step time, while one-step results
+are unchanged.  Neither series is clean enough for a mass extraction at this
+noise level, so the benefit is in the fidelity of the time series rather than
+in the extracted mass.

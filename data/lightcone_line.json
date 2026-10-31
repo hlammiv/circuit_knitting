@@ -1,0 +1,32 @@
+{
+ "direct_1step": {
+  "total_cx": 57,
+  "cone_cx": 47,
+  "survival": 0.6457613825246891
+ },
+ "direct_2step": {
+  "total_cx": 143,
+  "cone_cx": 105,
+  "survival": 0.3214921566284697
+ },
+ "knitted_2step": {
+  "terms": 1296,
+  "total_cx_mean": 60.55555555555556,
+  "cone_cx_min": 43,
+  "cone_cx_max": 49,
+  "cone_cx_mean": 45.0,
+  "survival_min": 0.5782188903598445,
+  "survival_max": 0.6360008149659696,
+  "survival_mean": 0.6209233419582613
+ },
+ "knitted_1step": {
+  "terms": 36,
+  "total_cx_mean": 31.0,
+  "cone_cx_min": 17,
+  "cone_cx_max": 21,
+  "cone_cx_mean": 17.444444444444443,
+  "survival_min": 0.7680114056446575,
+  "survival_max": 0.8275715522912985,
+  "survival_mean": 0.8209537582194496
+ }
+}

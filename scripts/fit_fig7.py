@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Fit and plot the knitted and non-knitted data used in paper Fig. 7."""
+"""Fit and plot the knitted and non-knitted data used in paper Fig. 7.
+
+The paper figure compares the two circuits compiled the same way: both pinned
+to the same straight twelve-qubit line of FakeWashingtonV2 at optimization
+level three (``--layout line``; files ``*_line.npy`` for the un-knitted series
+and ``*_line_exact.npy`` for the knitted one, see scripts/rerun_sec5.py).
+``--layout free`` reads the free-layout series (``*.npy`` without suffix),
+in which the transpiler folds the periodic ring onto the heavy-hex lattice.
+"""
 
 from __future__ import annotations
 
@@ -51,6 +59,14 @@ DEFAULT_JSON = ROOT / "paper" / "generated" / "fig7_fit_results.json"
 DEFAULT_TEX = ROOT / "paper" / "generated" / "fig7_fit_results.tex"
 DEFAULT_DATA_TEX = ROOT / "paper" / "generated" / "fig7_data_table.tex"
 DEFAULT_CACHE = ROOT / "paper" / "generated" / "fig7_bootstrap.npz"
+DEFAULT_CX_JSON = ROOT / "data" / "cx_counts_line.json"
+# Noiseless values at the same nine (N_t, epsilon) settings as the noisy runs
+# (one step of size t, then two steps of size t/2): the noise-free reference
+# for the same Trotter error.  Written by scripts/rerun_sec5.py --stage noiseless.
+DEFAULT_SAME_STEP = ROOT / "mass_scan_plot_data" / "ferm_num_m1p125_trot.npy"
+
+# File-name suffixes of the un-knitted and knitted series for each layout.
+LAYOUT_SUFFIXES = {"line": ("_line", "_line_exact"), "free": ("", "")}
 
 
 def truncated_cosine(t: np.ndarray, amplitude: float, frequency: float, offset: float) -> np.ndarray:
@@ -239,14 +255,15 @@ def _fit_bootstrap_draw(
             return None
 
 
-def load_data(data_dir: Path) -> dict[str, np.ndarray]:
+def load_data(data_dir: Path, layout: str = "line") -> dict[str, np.ndarray]:
+    no_knit_suffix, knitted_suffix = LAYOUT_SUFFIXES[layout]
     names = {
         "exact": "ferm_num_exact_no_noise_no_knit.npy",
         "exact_sigma": "bs_error_exact_no_noise_no_knit.npy",
-        "no_knit": "no_knit_noisy_resampled_fermion_number.npy",
-        "no_knit_sigma": "no_knit_noisy_resampled_bootstrap_error.npy",
-        "knitted": "knitted_noisy_resampled_fermion_number.npy",
-        "knitted_sigma": "knitted_noisy_resampled_bootstrap_error.npy",
+        "no_knit": f"no_knit_noisy_resampled_fermion_number{no_knit_suffix}.npy",
+        "no_knit_sigma": f"no_knit_noisy_resampled_bootstrap_error{no_knit_suffix}.npy",
+        "knitted": f"knitted_noisy_resampled_fermion_number{knitted_suffix}.npy",
+        "knitted_sigma": f"knitted_noisy_resampled_bootstrap_error{knitted_suffix}.npy",
     }
     result = {key: np.asarray(np.load(data_dir / filename), dtype=float) for key, filename in names.items()}
     n = len(result["no_knit"])
@@ -492,6 +509,8 @@ def make_figure(
     summary: dict,
     internals: dict,
     output: Path,
+    layout: str = "line",
+    same_step_reference: Path | None = None,
 ) -> None:
     apply_paper_style()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -499,9 +518,10 @@ def make_figure(
     dense_t = np.linspace(t[0], t[-1], 400)
     colors = {"no_knit": BLUE, "knitted": ORANGE}
     labels = {"no_knit": "without knitting", "knitted": "with knitting"}
+    no_knit_suffix, knitted_suffix = LAYOUT_SUFFIXES[layout]
     raw_files = {
-        "no_knit": "noisy_no_knit_trotter_evolution.pkl",
-        "knitted": "noisy_knitted_trotter_evolution.pkl",
+        "no_knit": f"noisy_no_knit_trotter_evolution{no_knit_suffix}.pkl",
+        "knitted": f"noisy_knitted_trotter_evolution{knitted_suffix}.pkl",
     }
     fig, ax = plt.subplots(figsize=FIGSIZE)
     ax.plot(
@@ -511,6 +531,18 @@ def make_figure(
         linewidth=1.7,
         label=r"noiseless, $\epsilon=0.05$",
     )
+    if same_step_reference is not None and same_step_reference.exists():
+        same_step = np.asarray(np.load(same_step_reference), dtype=float)[: len(t)]
+        ax.plot(
+            t,
+            same_step,
+            color=BLACK,
+            linewidth=1.2,
+            linestyle="--",
+            marker="x",
+            markersize=5,
+            label="noiseless, same Trotter steps",
+        )
     primary = summary["primary_model"]
     for series in ("no_knit", "knitted"):
         color = colors[series]
@@ -553,7 +585,7 @@ def make_figure(
     )
     # y range follows the data (the post-2026-10-26 state swings over ~0.15).
     add_trotter_regions(ax, left=-0.10)
-    ax.legend(ncol=3, fontsize=8, loc="lower left")
+    ax.legend(ncol=2, fontsize=8, loc="lower left")
     fig.tight_layout()
     fig.savefig(output, bbox_inches="tight")
     plt.close(fig)
@@ -652,18 +684,40 @@ $\\Delta C={delta_median:.3f}^{{+{delta_high - delta_median:.3f}}}_{{-{delta_med
     output.write_text(content)
 
 
-def write_data_table(data: dict[str, np.ndarray], output: Path) -> None:
-    """Write the Fig. 7 point values and their measured sampling costs."""
+def _cx_range(entry: dict | None) -> str:
+    """``$a$`` or ``$a\text{--}b$`` from a ``{"cx_min": a, "cx_max": b}`` entry."""
+    if entry is None:
+        return "--"
+    low, high = int(entry["cx_min"]), int(entry["cx_max"])
+    return f"${low}$" if low == high else f"${low}\\text{{--}}{high}$"
+
+
+def load_cx_counts(path: Path | None) -> dict | None:
+    """Compiled CNOT counts written by the line-layout compile reconstruction."""
+    if path is None or not path.exists():
+        return None
+    return json.loads(path.read_text())
+
+
+def write_data_table(data: dict[str, np.ndarray], output: Path, cx_counts: dict | None = None) -> None:
+    """Write the Fig. 7 point values, compiled CNOT counts and sampling costs."""
     output.parent.mkdir(parents=True, exist_ok=True)
     rows = []
+
+    def cx(kind: str, steps: int) -> str:
+        if cx_counts is None:
+            return "--"
+        return _cx_range(cx_counts[kind].get(str(steps)))
+
+    def multirow(text: str) -> str:
+        return r"\multirow{4}{*}{" + text + "}"
+
     group_starts = {
-        0: ("0", "0", "1", "$2$", "$2$"),
-        1: (r"\multirow{4}{*}{1}", r"\multirow{4}{*}{2}",
-            r"\multirow{4}{*}{36}", r"\multirow{4}{*}{$41\text{--}50$}",
-            r"\multirow{4}{*}{$39$}"),
-        5: (r"\multirow{4}{*}{2}", r"\multirow{4}{*}{4}",
-            r"\multirow{4}{*}{1{,}296}", r"\multirow{4}{*}{$98\text{--}116$}",
-            r"\multirow{4}{*}{$67\text{--}85$}"),
+        0: ("0", "0", "1", cx("direct", 0), cx("direct", 0)),
+        1: (multirow("1"), multirow("2"), multirow("36"),
+            multirow(cx("direct", 1)), multirow(cx("knitted_terms", 1))),
+        5: (multirow("2"), multirow("4"), multirow("1{,}296"),
+            multirow(cx("direct", 2)), multirow(cx("knitted_terms", 2))),
     }
     for index, time in enumerate(data["t"]):
         if index in group_starts:
@@ -708,13 +762,15 @@ aggregate count for each knitted data point is therefore
 $N_{\mathrm{shots}}=(6^k)\mathbin{\times}10\mathbin{\times}2^{14}$; each
 no-knit point has $N_{\mathrm{shots}}=10\mathbin{\times}2^{14}$.  Here
 $k$ counts only the CNOTs replaced by circuit cuts, not all CNOTs in the
-transpiled circuits.  The $N_{\mathrm{CNOT}}$ entries give compiled CNOT
-counts observed in a compilation-only reconstruction with
-\texttt{FakeWashingtonV2}, optimization level one, and eleven transpiler
-seeds.  The two-layer knitted range samples six representative decomposition
-terms per seed and is not retained metadata from the original runs.
-Uncertainties are the one-standard-deviation resampling
-uncertainties used in Fig.~\ref{fig:knitting-time-evolution}.}
+transpiled circuits.  The $N_{\mathrm{CNOT}}$ columns are the compiled CNOT
+counts of the circuits that were run: both the direct circuit and every
+knitted term are transpiled at optimization level three with the twelve
+circuit qubits pinned to the same straight line of \texttt{FakeWashingtonV2}
+(Sec.~\ref{sec:numresults}).  The direct range spans the ten transpiler seeds
+of the un-knitted replicas; the knitted range spans all $6^k$ decomposition
+terms, which share one transpiler seed.  The $t=0$ circuit contains only the
+two state-preparation CNOTs.  Uncertainties are the one-standard-deviation
+resampling uncertainties used in Fig.~\ref{fig:knitting-time-evolution}.}
 \label{tab:fig7-data}
 \end{table}
 """
@@ -729,6 +785,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tex", type=Path, default=DEFAULT_TEX)
     parser.add_argument("--data-table", type=Path, default=DEFAULT_DATA_TEX)
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
+    parser.add_argument(
+        "--layout",
+        choices=sorted(LAYOUT_SUFFIXES),
+        default="line",
+        help="which compiled series to read: line (both circuits pinned to the same "
+        "straight line, the paper figure) or free (transpiler-chosen layouts)",
+    )
+    parser.add_argument(
+        "--cx-json",
+        type=Path,
+        default=DEFAULT_CX_JSON,
+        help="compiled CNOT counts for the data table (written by the line compile "
+        "reconstruction); the columns read '--' when the file is absent",
+    )
     parser.add_argument("--bootstrap-samples", type=int, default=10000)
     parser.add_argument("--seed", type=int, default=20260819)
     parser.add_argument(
@@ -736,6 +806,17 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=1,
         help="processes used to compute bootstrap fits (results remain seed-deterministic)",
+    )
+    parser.add_argument(
+        "--same-step-reference",
+        type=Path,
+        default=DEFAULT_SAME_STEP,
+        help="noiseless values at the noisy runs' own Trotter settings, drawn as a dashed reference",
+    )
+    parser.add_argument(
+        "--figure-only",
+        action="store_true",
+        help="redraw the figure from the existing JSON summary and bootstrap cache",
     )
     parser.add_argument(
         "--analysis-only",
@@ -756,24 +837,30 @@ def main() -> None:
         raise ValueError("at least 100 bootstrap samples are required")
     if args.workers < 1:
         raise ValueError("workers must be at least one")
-    data = load_data(args.data_dir)
+    data = load_data(args.data_dir, args.layout)
+    cx_counts = load_cx_counts(args.cx_json if args.layout == "line" else None)
+    if args.figure_only:
+        summary = json.loads(args.json.read_text())
+        internals = load_analysis_cache(args.cache, data, summary)
+        make_figure(data, args.data_dir, summary, internals, args.figure, args.layout, args.same_step_reference)
+        return
     if args.report_only:
         summary = json.loads(args.json.read_text())
         internals = load_analysis_cache(args.cache, data, summary)
         add_parameter_intervals(summary, internals)
         args.json.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
         write_tex(summary, args.tex)
-        write_data_table(data, args.data_table)
+        write_data_table(data, args.data_table, cx_counts)
         print(json.dumps(summary, indent=2, sort_keys=True))
         return
     summary, internals = analyze(data, args.bootstrap_samples, args.seed, args.workers)
     args.json.parent.mkdir(parents=True, exist_ok=True)
     args.json.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
     write_tex(summary, args.tex)
-    write_data_table(data, args.data_table)
+    write_data_table(data, args.data_table, cx_counts)
     save_analysis_cache(args.cache, data, summary, internals)
     if not args.analysis_only:
-        make_figure(data, args.data_dir, summary, internals, args.figure)
+        make_figure(data, args.data_dir, summary, internals, args.figure, args.layout, args.same_step_reference)
     print(json.dumps(summary, indent=2, sort_keys=True))
 
 
