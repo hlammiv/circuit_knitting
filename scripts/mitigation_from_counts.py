@@ -3,8 +3,15 @@ sites) applied to the saved counts of both line series, no new simulation."""
 import sys, pickle, warnings, json
 warnings.filterwarnings("ignore")
 sys.path.insert(0, "scripts"); sys.path.insert(0, ".")
+import argparse
 import numpy as np
 import rerun_sec5 as r
+parser = argparse.ArgumentParser()
+parser.add_argument("--direct-sim", choices=("fake", "aer"), default="fake",
+                    help="un-knitted data set (see rerun_sec5.DIRECT_SIM); aer = same simulator as the knitter")
+args = parser.parse_args()
+TAG = "" if args.direct_sim == "fake" else "_aer"
+r.DIRECT_SIM = args.direct_sim
 from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeWashingtonV2
 r.LAYOUT = "line"; r.SUFFIX = "_line"; r.KNIT_DIR = r.DATA / "noisy_knitted_trotter_evol_line_exact"
@@ -39,7 +46,7 @@ def variants(counts):
             "postsel": observable(v, True), "both": observable(apply(v, Ainv), True),
             "sector_fraction": float((v * sector).sum() / v.sum())}
 # un-knitted line
-nk = pickle.load(open("data/noisy_no_knit_trotter_evolution_line.pkl", "rb"))
+nk = pickle.load(open(f"data/noisy_no_knit_trotter_evolution_line{TAG}.pkl", "rb"))
 res = {"no_knit": {}, "knitted": {}}
 for seed, run in nk.items():
     res["no_knit"][seed] = [variants(c) for c in run["counts"]]
@@ -69,7 +76,7 @@ for series in ("no_knit", "knitted"):
     for key in keys:
         arr = np.array([[res[series][seed][i][key] for i in range(9)] for seed in res[series]])
         out[series][key] = {"mean": arr.mean(0).tolist(), "sem": (arr.std(0, ddof=1) / np.sqrt(len(arr))).tolist()}
-json.dump(out, open("data/mitigation_combined_level.json", "w"), indent=1)
+json.dump(out, open(f"data/mitigation_combined_level{TAG}.json", "w"), indent=1)
 print("\n t     ideal | no-knit: raw  readout  postsel  both | knitted: raw  readout  postsel  both | sector frac nk / k")
 for i in range(9):
     g = lambda s, k: out[s][k]["mean"][i]

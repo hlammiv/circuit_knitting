@@ -15,8 +15,21 @@ from pathlib import Path
 warnings.filterwarnings("ignore")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts")); sys.path.insert(0, str(ROOT))
+import argparse
 import numpy as np
 import rerun_sec5 as r
+parser = argparse.ArgumentParser()
+parser.add_argument("--direct-sim", choices=("fake", "aer"), default="fake",
+                    help="un-knitted physics and calibration data set (see rerun_sec5.DIRECT_SIM)")
+parser.add_argument("--drift", type=float, default=None,
+                    help="take the calibrations from data/calibration_line/drift_s<value> (noise scaled by value; "
+                         "implies --direct-sim aer) while the physics data stay nominal")
+args = parser.parse_args()
+if args.drift is not None:
+    args.direct_sim = "aer"
+TAG = "" if args.direct_sim == "fake" else "_aer"
+CAL = r.DATA / "calibration_line" / (f"drift_s{args.drift:g}" if args.drift is not None else "")
+r.DIRECT_SIM = args.direct_sim
 from qiskit.quantum_info import Statevector
 from clifford_calibration import calibration_circuit
 from calibration_runs import ANGLES, SCHEDULE
@@ -35,6 +48,26 @@ def vec(counts):
 def value(v, post):
     if post: v = v * sector
     return float(v[bit6].sum() / v.sum())
+# Readout inversion on the twelve final bits ("full" = readout correction +
+# post-selection).  Physics data use the nominal matrices; a drifted calibration
+# is corrected with the matrices of its own (scaled) noise.
+from qiskit_aer.noise import NoiseModel
+from qiskit_ibm_runtime.fake_provider import FakeWashingtonV2
+def inverses(backend):
+    nm = NoiseModel.from_backend(backend)
+    return [np.linalg.inv(np.asarray(nm._local_readout_errors[(q,)].probabilities, float)) for q in r.line_layout()]
+AINV_PHYS = inverses(FakeWashingtonV2())
+if args.drift is None:
+    AINV_CAL = AINV_PHYS
+else:
+    import calibration_drift as cd
+    AINV_CAL = inverses(cd.scaled_washington(args.drift)())
+def readout(v, mats):
+    p = v.reshape((2,) * N)                            # axis a holds clbit N-1-a
+    for q, m in enumerate(mats):
+        axis = N - 1 - q
+        p = np.moveaxis(np.tensordot(m.T, p, axes=([1], [axis])), 0, axis)
+    return p.reshape(-1)
 def shot_error(v, post, shots=r.NOISY_SHOTS):
     # binomial-type error of the observable from `shots` draws of |v|-weighted strings
     w = np.abs(v) * (sector if post else 1); w = w / w.sum()
@@ -47,17 +80,24 @@ for steps in (1, 2):
     assert abs(probs[sector].sum() - 1) < 1e-9, "calibration circuit leaves the charge sector"
 print("calibration circuits stay in the charge sector exactly")
 
-cal = pickle.load(open(r.DATA / "calibration_line" / "direct.pkl", "rb"))
-def f_direct(seed, slot, post):
+cal = pickle.load(open(CAL / ("direct.pkl" if args.drift is not None or TAG == "" else "direct_aer.pkl"), "rb"))
+def f_direct(seed, slot, post, full=False):
     run = cal["runs"][(seed, slot)]; v = vec(run["counts"]); e = cal["exact"][run["steps"]]
+    if full: v = readout(v, AINV_CAL)
     val = value(v, post); err = shot_error(v, post)
     return (0.5 - val) / (0.5 - e), err / (0.5 - e)
-knit_cal = {}
+knit_cal, knit_cal_full = {}, {}
 for steps in (1, 2):
-    paths = sorted((r.DATA / "calibration_line").glob(f"knitted_step{steps}_seed*.pkl"))
+    paths = sorted(CAL.glob(f"knitted_step{steps}_seed*[0-9].pkl"))
     if paths:
         d = pickle.load(open(paths[0], "rb")); v = vec(d["results"])
         knit_cal[steps] = {post: ((0.5 - value(v, post)) / (0.5 - d["exact"]), shot_error(v, post) / (0.5 - d["exact"])) for post in (False, True)}
+        # term-by-term readout-corrected calibration (knitted_calibration_readout.py)
+        rpath = paths[0].with_name(paths[0].stem + "_readout.pkl")
+        if rpath.exists():
+            v = vec(pickle.load(open(rpath, "rb")))
+            knit_cal_full[steps] = ((0.5 - value(v, True)) / (0.5 - d["exact"]), shot_error(v, True) / (0.5 - d["exact"]))
+print("knitted readout-corrected calibration f (post-selected):", {s: f"{x[0]:.3f}" for s, x in knit_cal_full.items()})
 print("knitted calibration f:", {s: {("post" if p else "raw"): f"{x[0]:.3f}({x[1]:.3f})" for p, x in c.items()} for s, c in knit_cal.items()})
 
 def rescale(val, err, f, ferr):
@@ -66,17 +106,18 @@ def rescale(val, err, f, ferr):
 
 out = {"t": [s for s in np.arange(9) * 0.2], "ideal": np.load(ROOT / "mass_scan_plot_data" / "ferm_num_m1p125_trot.npy").tolist()}
 # un-knitted: counts per replica/slot are in the line pickle
-nk = pickle.load(open(r.DATA / "noisy_no_knit_trotter_evolution_line.pkl", "rb"))
-table = {k: [] for k in ("raw", "postsel", "raw_rescaled", "postsel_rescaled")}
+nk = pickle.load(open(r.DATA / f"noisy_no_knit_trotter_evolution_line{TAG}.pkl", "rb"))
+table = {k: [] for k in ("raw", "postsel", "raw_rescaled", "postsel_rescaled", "full", "full_rescaled")}
 for seed, run in nk.items():
     rows = {k: [] for k in table}
     for slot, counts in enumerate(run["counts"]):
         v = vec(counts); steps = SCHEDULE[slot][0]
-        for post, key in ((False, "raw"), (True, "postsel")):
-            val, err = value(v, post), shot_error(v, post)
+        for post, key, full in ((False, "raw", False), (True, "postsel", False), (True, "full", True)):
+            w = readout(v, AINV_PHYS) if full else v
+            val, err = value(w, post), shot_error(w, post)
             rows[key].append((val, err))
             if steps == 0: rows[key + "_rescaled"].append((val, err)); continue
-            f, ferr = f_direct(seed, slot, post)
+            f, ferr = f_direct(seed, slot, post, full)
             rows[key + "_rescaled"].append(rescale(val, err, f, ferr))
     for k in table: table[k].append(rows[k])
 def summarize(table):
@@ -95,7 +136,7 @@ for seed in r.KNIT_SEEDS:
     res0 = r.run_direct(fn, r.circuit_for(fn, 0, 0.0, r.MASS), r.NOISY_SHOTS,
                         simulator_seed=np.random.randint(1024 ** 2), transpiler_seed=np.random.randint(1024 ** 2))
     raw = [res0] + [pickle.load(open(r.DATA / "noisy_knitted_trotter_evol_line_exact" / r.knit_path(s, e, seed).name, "rb")) for s, e in r.KNIT_RUNS]
-    full = [res0] + [pickle.load(open(r.DATA / "noisy_knitted_trotter_evol_line_exact_readout" / r.knit_path(s, e, seed).name, "rb")) for s, e in r.KNIT_RUNS]
+    full = [{k: x for k, x in zip([format(i, "012b") for i in range(2 ** N)], readout(vec(res0), AINV_PHYS))}] + [pickle.load(open(r.DATA / "noisy_knitted_trotter_evol_line_exact_readout" / r.knit_path(s, e, seed).name, "rb")) for s, e in r.KNIT_RUNS]
     rows = {k: [] for k in table}
     for slot in range(9):
         steps = SCHEDULE[slot][0]
@@ -103,11 +144,12 @@ for seed in r.KNIT_SEEDS:
             v = vec(src[slot]); val, err = value(v, post), shot_error(v, post)
             rows[key].append((val, err))
             if steps == 0 or steps not in knit_cal: rows[key + "_rescaled"].append((val, err) if steps == 0 else (np.nan, np.nan)); continue
-            f, ferr = knit_cal[steps][post]
+            f, ferr = knit_cal_full[steps] if key == "full" and steps in knit_cal_full else knit_cal[steps][post]
             rows[key + "_rescaled"].append(rescale(val, err, f, ferr))
     for k in table: table[k].append(rows[k])
 out["knitted"] = summarize(table)
-json.dump(out, open(r.DATA / "calibration_line" / "rescaled.json", "w"), indent=1)
+name = "rescaled" + TAG + (f"_drift_s{args.drift:g}" if args.drift is not None else "") + ".json"
+json.dump(out, open(r.DATA / "calibration_line" / name, "w"), indent=1); print("wrote", name)
 ideal = np.array(out["ideal"])
 print("\n t    ideal | un-knitted: raw  resc.  postsel  ps+resc | knitted: raw  resc.  postsel+readout  +resc")
 for i in range(9):

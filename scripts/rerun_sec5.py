@@ -81,6 +81,12 @@ THREADS = 0
 # different random stream; see ExperimentConfig.exact_sampling).  Outputs go
 # to a separate directory so the shot-sampled data are never overwritten.
 EXACT_SAMPLING = False
+# Simulator for un-knitted runs on the line.  "fake": SamplerV2 on the fake
+# backend, whose noise model takes the asymmetric readout errors from the
+# backend properties.  "aer": AerSimulator.from_backend, the simulator the
+# knitter uses (same gate noise, symmetric readout from the target), so both
+# series see identical noise.  "aer" outputs get an _aer suffix.
+DIRECT_SIM = "fake"
 
 # Time grid of Figs. 6 and 7: t = 0, 0.2, ..., 1.6 with 0, 1, 1, 1, 1, 2, 2, 2, 2
 # Trotter steps, i.e. epsilon = t for one step and t/2 for two.
@@ -206,7 +212,11 @@ def run_direct(fn, circuit, num_shots, simulator_seed, transpiler_seed):
     backend = FakeWashingtonV2()
     pass_manager = generate_preset_pass_manager(optimization_level=3, backend=backend,
                                                 seed_transpiler=transpiler_seed, initial_layout=line_layout())
-    sampler = SamplerV2(backend, options={"simulator": {"seed_simulator": simulator_seed}})
+    simulator = backend
+    if DIRECT_SIM == "aer":
+        from qiskit_aer import AerSimulator
+        simulator = AerSimulator.from_backend(backend)
+    sampler = SamplerV2(simulator, options={"simulator": {"seed_simulator": simulator_seed}})
     result = sampler.run([pass_manager.run(circuit)], shots=num_shots).result()[0].data.meas.get_counts()
     return {key: result[key] for key in sorted(result)}
 
@@ -381,6 +391,9 @@ def main():
     parser.add_argument("--exact-sampling", action="store_true",
                         help="knitted stage: exact per-term distributions by branch enumeration "
                              "(much faster; writes to data/noisy_knitted_trotter_evol*_exact)")
+    parser.add_argument("--direct-sim", choices=["fake", "aer"], default="fake",
+                        help="un-knitted line runs: fake-backend SamplerV2 (default) or AerSimulator.from_backend, "
+                             "the knitter's simulator (outputs get an _aer suffix)")
     parser.add_argument("--threads", type=int, default=0,
                         help="Aer threads for this process (default 0 = all cores); use with --seeds to run "
                              "several workers side by side")
@@ -392,6 +405,10 @@ def main():
     if LAYOUT == "line":
         SUFFIX = "_line"; KNIT_DIR = DATA / "noisy_knitted_trotter_evol_line"
         print(f"  pinned line layout: {line_layout()}", flush=True)
+    global DIRECT_SIM
+    DIRECT_SIM = args.direct_sim
+    if DIRECT_SIM == "aer":
+        SUFFIX += "_aer"
     global EXACT_SAMPLING
     EXACT_SAMPLING = args.exact_sampling
     if EXACT_SAMPLING:

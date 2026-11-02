@@ -28,8 +28,10 @@ def main():
     parser.add_argument("--steps", type=int, nargs="*", default=[1, 2])
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--seed", type=int, default=20261101, help="knitted: replica seed")
+    parser.add_argument("--direct-sim", choices=("fake", "aer"), default="fake",
+                        help="direct stage: simulator for the un-knitted runs (see rerun_sec5.DIRECT_SIM)")
     args = parser.parse_args()
-    r.LAYOUT = "line"; r.EXACT_SAMPLING = True; r.THREADS = args.threads
+    r.LAYOUT = "line"; r.EXACT_SAMPLING = True; r.THREADS = args.threads; r.DIRECT_SIM = args.direct_sim
     fn = r.load_notebook_functions()
     circuits = {s: calibration_circuit(fn, s, *ANGLES) for s in (1, 2)}
     exact = {s: exact_occupation(circuits[s]) for s in (1, 2)}
@@ -57,7 +59,7 @@ def main():
                                                  "value": value, "counts": counts}
                 print(f"  seed {seed} slot {slot} steps {steps}: cx {results['runs'][(seed, slot)]['cx']}  <n_6> {value:.4f}"
                       f"  f = {(0.5 - value) / (0.5 - exact[steps]):.3f}", flush=True)
-        pickle.dump(results, open(OUT / "direct.pkl", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(results, open(OUT / ("direct.pkl" if args.direct_sim == "fake" else "direct_aer.pkl"), "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     else:
         make_config, circuit_knitter = r.knitter()
         config = make_config()
