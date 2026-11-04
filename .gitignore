@@ -34,3 +34,6 @@ paper/*Notes.bib
 # Local test/build output
 build/
 dist/
+
+# Scaled-noise term distributions (reproducible, several GB)
+data/zne_joint/

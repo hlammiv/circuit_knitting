@@ -76,7 +76,7 @@ def signed(joint, num_cx):
 def readout_inverse(v, term_circuit, num_cx):
     nbits = NQ + num_cx
     structure = analyze_term(term_circuit, num_cx, NQ)
-    physical_of_clbit = {num_cx + i: line[i] for i in range(NQ)}
+    physical_of_clbit = {num_cx + i: structure.physical[structure.final[num_cx + i]] for i in range(NQ)}
     for local_q, clbit in structure.internal:
         physical_of_clbit[clbit] = structure.physical[local_q]
     p = v.reshape((2,) * nbits)

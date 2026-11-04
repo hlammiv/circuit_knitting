@@ -9,7 +9,8 @@ noisy outcome distribution is computed once (improved.exact_sampling) and the
 replicas are drawn from it, 16384 shots each, as the knitter would.  Stored per
 term: the signed per-shot weights A, N, Aps, Nps (see knitted_term_values.py),
 raw and readout-corrected (with the scaled assignment matrices), exactly and for
-every replica.
+every replica.  The distribution itself goes to data/zne_joint (single precision,
+not under version control), so further replicas need no new simulation.
 
 Terms are split over workers (term index mod --nworkers), so several processes
 on several machines can share one scale; finished terms are skipped.
@@ -34,6 +35,8 @@ parser.add_argument("--worker", type=int, default=0)
 parser.add_argument("--nworkers", type=int, default=1)
 parser.add_argument("--threads", type=int, default=1)
 parser.add_argument("--steps", type=int, nargs="+", default=[1, 2])
+parser.add_argument("--rotation-terms-only", action="store_true",
+                    help="only the terms with no mid-circuit measurement (every cut gate replaced by rotations)")
 parser.add_argument("--reverse", action="store_true",
                     help="take this worker's terms from the end, to help a slower machine that works from the start")
 args = parser.parse_args()
@@ -42,7 +45,7 @@ fn = r.load_notebook_functions(); line = r.line_layout(); conq, tarq = r.CUT
 NQ = 12; MID = r.MID; SHOTS = r.NOISY_SHOTS
 noise_model = AerSimulator.from_backend(cd.scaled_washington(args.scale)()).options.noise_model
 inverse = {q: np.linalg.inv(np.asarray(noise_model._local_readout_errors[(q,)].probabilities, float))
-           for q in line + [p for p in range(127)] if (q,) in noise_model._local_readout_errors}
+           for q in line if (q,) in noise_model._local_readout_errors}   # every measured qubit is on the line
 versions = {p: importlib.metadata.version(p) for p in ("qiskit", "qiskit-aer", "qiskit-ibm-runtime")}
 idx = np.arange(2 ** NQ)
 charge = sum(((idx >> q) & 1) for q in (0, 2, 8, 10)) + (1 - ((idx >> 4) & 1)) + (1 - ((idx >> 6) & 1))
@@ -63,7 +66,7 @@ def both(joint, structure, num_cx):
     p = joint.copy()                                    # p[final, internal]; final bit i = data qubit i
     p = p.reshape((2,) * NQ + (2 ** k,))
     for i in range(NQ):
-        m = inverse.get(line[i])
+        m = inverse.get(structure.physical[structure.final[num_cx + i]])     # routing permutes the final qubits
         if m is not None:
             axis = NQ - 1 - i
             p = np.moveaxis(np.tensordot(m.T, p, axes=([1], [axis])), 0, axis)
@@ -86,6 +89,8 @@ for steps, eps in r.KNIT_RUNS:
                                        protocol=pickle.HIGHEST_PROTOCOL)).hexdigest()
     cache = ROOT / ".cache" / "circuit_knitting" / comp
     for j in range(6 ** (2 * steps)):
+        if args.rotation_terms_only and any((j // 6 ** d) % 6 > 1 for d in range(2 * steps)):
+            continue
         jobs.append((steps, eps, j, cache / f"batch-{j:05d}.pkl"))
 mine = [job for n, job in enumerate(jobs) if n % args.nworkers == args.worker]
 if args.reverse:
@@ -109,4 +114,9 @@ for steps, eps, j, cache_file in mine:
     tmp = out.with_suffix(".tmp.npz")
     np.savez(tmp, exact=np.array(exact), replicas=np.array(reps), mids=len(dist.structure.internal))
     tmp.rename(out)
+    joint_out = r.DATA / "zne_joint" / f"s{args.scale:g}" / f"step{steps}_eps{eps:g}" / f"term{j:04d}.npz"
+    joint_out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = joint_out.with_suffix(".tmp.npz")
+    np.savez_compressed(tmp, joint=dist.joint.astype(np.float32))
+    tmp.rename(joint_out)
     print(f"  step{steps} eps{eps:g} term {j}: {time.perf_counter() - started:.1f} s", flush=True)

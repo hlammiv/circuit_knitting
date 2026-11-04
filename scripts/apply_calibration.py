@@ -55,18 +55,18 @@ from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeWashingtonV2
 def inverses(backend):
     nm = NoiseModel.from_backend(backend)
-    return [np.linalg.inv(np.asarray(nm._local_readout_errors[(q,)].probabilities, float)) for q in r.line_layout()]
+    return {q: np.linalg.inv(np.asarray(nm._local_readout_errors[(q,)].probabilities, float)) for q in r.line_layout()}
 AINV_PHYS = inverses(FakeWashingtonV2())
 if args.drift is None:
     AINV_CAL = AINV_PHYS
 else:
     import calibration_drift as cd
     AINV_CAL = inverses(cd.scaled_washington(args.drift)())
-def readout(v, mats):
+def readout(v, mats, physical):
     p = v.reshape((2,) * N)                            # axis a holds clbit N-1-a
-    for q, m in enumerate(mats):
+    for q, m in enumerate(physical):                   # physical[q] was read into clbit q
         axis = N - 1 - q
-        p = np.moveaxis(np.tensordot(m.T, p, axes=([1], [axis])), 0, axis)
+        p = np.moveaxis(np.tensordot(mats[m].T, p, axes=([1], [axis])), 0, axis)
     return p.reshape(-1)
 def shot_error(v, post, shots=r.NOISY_SHOTS):
     # binomial-type error of the observable from `shots` draws of |v|-weighted strings
@@ -80,10 +80,11 @@ for steps in (1, 2):
     assert abs(probs[sector].sum() - 1) < 1e-9, "calibration circuit leaves the charge sector"
 print("calibration circuits stay in the charge sector exactly")
 
+CAL_CIRCUITS = {steps: calibration_circuit(fn, steps, *ANGLES) for steps in (1, 2)}
 cal = pickle.load(open(CAL / ("direct.pkl" if args.drift is not None or TAG == "" else "direct_aer.pkl"), "rb"))
 def f_direct(seed, slot, post, full=False):
     run = cal["runs"][(seed, slot)]; v = vec(run["counts"]); e = cal["exact"][run["steps"]]
-    if full: v = readout(v, AINV_CAL)
+    if full: v = readout(v, AINV_CAL, r.final_physical(CAL_CIRCUITS[run["steps"]], r.direct_transpiler_seeds(seed)[slot]))
     val = value(v, post); err = shot_error(v, post)
     return (0.5 - val) / (0.5 - e), err / (0.5 - e)
 knit_cal, knit_cal_full = {}, {}
@@ -110,10 +111,12 @@ nk = pickle.load(open(r.DATA / f"noisy_no_knit_trotter_evolution_line{TAG}.pkl",
 table = {k: [] for k in ("raw", "postsel", "raw_rescaled", "postsel_rescaled", "full", "full_rescaled")}
 for seed, run in nk.items():
     rows = {k: [] for k in table}
+    transpiler_seeds = r.direct_transpiler_seeds(seed)
     for slot, counts in enumerate(run["counts"]):
-        v = vec(counts); steps = SCHEDULE[slot][0]
+        v = vec(counts); steps, eps = SCHEDULE[slot]
+        physical = r.final_physical(r.circuit_for(fn, steps, eps, r.MASS), transpiler_seeds[slot])
         for post, key, full in ((False, "raw", False), (True, "postsel", False), (True, "full", True)):
-            w = readout(v, AINV_PHYS) if full else v
+            w = readout(v, AINV_PHYS, physical) if full else v
             val, err = value(w, post), shot_error(w, post)
             rows[key].append((val, err))
             if steps == 0: rows[key + "_rescaled"].append((val, err)); continue
@@ -133,10 +136,10 @@ out["no_knit"] = summarize(table)
 table = {k: [] for k in ("raw", "postsel", "raw_rescaled", "postsel_rescaled", "full", "full_rescaled")}
 for seed in r.KNIT_SEEDS:
     np.random.seed(seed); np.random.seed(np.random.randint(1024 ** 2))
-    res0 = r.run_direct(fn, r.circuit_for(fn, 0, 0.0, r.MASS), r.NOISY_SHOTS,
-                        simulator_seed=np.random.randint(1024 ** 2), transpiler_seed=np.random.randint(1024 ** 2))
+    sim0, trans0 = np.random.randint(1024 ** 2), np.random.randint(1024 ** 2)
+    res0 = r.run_direct(fn, r.circuit_for(fn, 0, 0.0, r.MASS), r.NOISY_SHOTS, simulator_seed=sim0, transpiler_seed=trans0)
     raw = [res0] + [pickle.load(open(r.DATA / "noisy_knitted_trotter_evol_line_exact" / r.knit_path(s, e, seed).name, "rb")) for s, e in r.KNIT_RUNS]
-    full = [{k: x for k, x in zip([format(i, "012b") for i in range(2 ** N)], readout(vec(res0), AINV_PHYS))}] + [pickle.load(open(r.DATA / "noisy_knitted_trotter_evol_line_exact_readout" / r.knit_path(s, e, seed).name, "rb")) for s, e in r.KNIT_RUNS]
+    full = [{k: x for k, x in zip([format(i, "012b") for i in range(2 ** N)], readout(vec(res0), AINV_PHYS, r.final_physical(r.circuit_for(fn, 0, 0.0, r.MASS), trans0)))}] + [pickle.load(open(r.DATA / "noisy_knitted_trotter_evol_line_exact_readout" / r.knit_path(s, e, seed).name, "rb")) for s, e in r.KNIT_RUNS]
     rows = {k: [] for k in table}
     for slot in range(9):
         steps = SCHEDULE[slot][0]

@@ -42,7 +42,7 @@ def identities(steps, epsilon, sim_seed):
 def mitigate_term(counts, term_circuit, num_cx):
     nbits = NQ + num_cx
     structure = analyze_term(term_circuit, num_cx, NQ)
-    physical_of_clbit = {num_cx + i: line[i] for i in range(NQ)}      # final bit i <-> circuit qubit i
+    physical_of_clbit = {num_cx + i: structure.physical[structure.final[num_cx + i]] for i in range(NQ)}      # routing permutes the final qubits
     for local_q, clbit in structure.internal:
         physical_of_clbit[clbit] = structure.physical[local_q]
     v = np.zeros(2 ** nbits)

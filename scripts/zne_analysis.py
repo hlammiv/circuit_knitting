@@ -20,6 +20,7 @@ import calibration_drift as cd
 from qiskit_aer import AerSimulator
 
 r.LAYOUT = "line"
+FN = r.load_notebook_functions()
 N = 12; MID = r.MID
 SCALES = (1.0, 1.5, 2.0)
 SLOTS = [(1, e) for e in (0.2, 0.4, 0.6, 0.8)] + [(2, e) for e in (0.5, 0.6, 0.7, 0.8)]
@@ -75,14 +76,14 @@ def knitted_series():
 # ---- un-knitted: counts per replica and slot
 def inverses(scale):
     nm = AerSimulator.from_backend(cd.scaled_washington(scale)()).options.noise_model
-    return [np.linalg.inv(np.asarray(nm._local_readout_errors[(q,)].probabilities, float)) for q in r.line_layout()]
+    return {q: np.linalg.inv(np.asarray(nm._local_readout_errors[(q,)].probabilities, float)) for q in r.line_layout()}
 
 
-def readout(v, mats):
+def readout(v, mats, physical):
     p = v.reshape((2,) * N)
-    for q, m in enumerate(mats):
+    for q, m in enumerate(physical):
         axis = N - 1 - q
-        p = np.moveaxis(np.tensordot(m.T, p, axes=([1], [axis])), 0, axis)
+        p = np.moveaxis(np.tensordot(mats[m].T, p, axes=([1], [axis])), 0, axis)
     return p.reshape(-1)
 
 
@@ -95,10 +96,12 @@ def direct_series():
             continue
         runs = pickle.load(open(path, "rb")); mats = inverses(scale)
         for ri, seed in enumerate(r.NOISY_SEEDS):
-            for si in range(len(SLOTS)):
+            transpiler_seeds = r.direct_transpiler_seeds(seed)
+            for si, (steps, eps) in enumerate(SLOTS):
+                physical = r.final_physical(r.circuit_for(FN, steps, eps, r.MASS), transpiler_seeds[si + 1])
                 v = np.zeros(2 ** N)
                 for s, c in runs[seed]["counts"][si + 1].items(): v[int(s, 2)] = c
-                w = readout(v, mats)
+                w = readout(v, mats, physical)
                 vals["raw"][ri, si, ci] = v[bit6].sum() / v.sum()
                 vals["postsel"][ri, si, ci] = v[bit6 & sector].sum() / v[sector].sum()
                 vals["full"][ri, si, ci] = w[bit6 & sector].sum() / w[sector].sum()
@@ -114,13 +117,13 @@ for name, series in (("no_knit", direct_series()), ("knitted", knitted_series())
         per = [[extrapolate(a[ri, si]) for si in range(len(SLOTS))] for ri in range(a.shape[0])]
         for method in ("none", "linear", "exponential", "quadratic"):
             m = np.array([[p[si].get(method, np.nan) for si in range(len(SLOTS))] for p in per])
-            ok = ~np.isnan(m).any(1)
-            if not ok.any():
+            count = (~np.isnan(m)).sum(0)                   # replicas available per slot
+            if not count.any():
                 continue
-            m = m[ok]
-            mean = m.mean(0); sem = m.std(0, ddof=1) / np.sqrt(len(m)) if len(m) > 1 else np.full(len(SLOTS), np.nan)
-            out[name][f"{variant}_{method}"] = {"mean": mean.tolist(), "sem": sem.tolist(), "replicas": int(ok.sum())}
+            with np.errstate(all="ignore"):
+                mean = np.nanmean(m, 0); sem = np.nanstd(m, 0, ddof=1) / np.sqrt(count)
+            out[name][f"{variant}_{method}"] = {"mean": mean.tolist(), "sem": sem.tolist(), "replicas": count.tolist()}
             dev = mean - target
-            print(f"{name:8s} {variant:8s} {method:12s} n={ok.sum():2d}  one-step mean|dev| {np.abs(dev[:4]).mean():.4f}"
-                  f"  two-step mean|dev| {np.abs(dev[4:]).mean():.4f}  signed {np.round(dev[4:], 4)}  sem {np.nanmean(sem[4:]):.4f}")
+            print(f"{name:8s} {variant:8s} {method:12s} n={count.min():2d}  one-step mean|dev| {np.nanmean(np.abs(dev[:4])):.4f}"
+                  f" sem {np.nanmean(sem[:4]):.4f} | two-step mean|dev| {np.nanmean(np.abs(dev[4:])):.4f}  signed {np.round(dev[4:], 4)}  sem {np.nanmean(sem[4:]):.4f}")
 json.dump(out, open(r.DATA / "zne_line.json", "w"), indent=1)

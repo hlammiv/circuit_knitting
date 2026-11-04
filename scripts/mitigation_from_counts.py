@@ -17,19 +17,20 @@ from qiskit_ibm_runtime.fake_provider import FakeWashingtonV2
 r.LAYOUT = "line"; r.SUFFIX = "_line"; r.KNIT_DIR = r.DATA / "noisy_knitted_trotter_evol_line_exact"
 fn = r.load_notebook_functions(); line = r.line_layout()
 nm = NoiseModel.from_backend(FakeWashingtonV2())
-A = [np.asarray(nm._local_readout_errors[(q,)].probabilities, float) for q in line]   # A[q][true, recorded]
-Ainv = [np.linalg.inv(a) for a in A]
-print("readout P(flip) per line qubit:", [f"{a[0,1]:.3f}/{a[1,0]:.3f}" for a in A])
+A = {q: np.asarray(nm._local_readout_errors[(q,)].probabilities, float) for q in line}   # A[q][true, recorded]
+Ainv = {q: np.linalg.inv(a) for q, a in A.items()}
+print("readout P(flip) per line qubit:", [f"{a[0,1]:.3f}/{a[1,0]:.3f}" for a in A.values()])
 N = 12; MID = r.MID
+KNIT_FINAL = [32, 31, 51, 36, 50, 49, 68, 55, 69, 70, 74, 89]   # physical qubit per final clbit, the same in every knitted term
 def to_vec(counts):
     v = np.zeros(2 ** N)
     for s, c in counts.items(): v[int(s, 2)] = c      # int(s,2): leftmost char = clbit 11 = bit 11
     return v
-def apply(v, mats):
+def apply(v, mats, physical):
     p = v.reshape((2,) * N)                            # axis a holds clbit N-1-a
-    for q, m in enumerate(mats):
+    for q, m in enumerate(physical):                   # physical[q] was read into clbit q
         axis = N - 1 - q
-        p = np.moveaxis(np.tensordot(m.T, p, axes=([1], [axis])), 0, axis)   # p'[r] = sum_t m[t,r] p[t]
+        p = np.moveaxis(np.tensordot(mats[m].T, p, axes=([1], [axis])), 0, axis)   # p'[r] = sum_t m[t,r] p[t]
     return p.reshape(-1)
 idx = np.arange(2 ** N)
 # conserved charge: site occupation before the meson operator X4 Z5 X6 that precedes
@@ -40,27 +41,31 @@ bit6 = ((idx >> (MID + 2)) & 1).astype(bool)          # observable: clbit 6 = si
 def observable(v, post):
     if post: v = v * sector
     return float(v[bit6].sum() / v.sum())
-def variants(counts):
+def variants(counts, physical):
     v = to_vec(counts)
-    return {"raw": observable(v, False), "readout": observable(apply(v, Ainv), False),
-            "postsel": observable(v, True), "both": observable(apply(v, Ainv), True),
+    return {"raw": observable(v, False), "readout": observable(apply(v, Ainv, physical), False),
+            "postsel": observable(v, True), "both": observable(apply(v, Ainv, physical), True),
             "sector_fraction": float((v * sector).sum() / v.sum())}
 # un-knitted line
 nk = pickle.load(open(f"data/noisy_no_knit_trotter_evolution_line{TAG}.pkl", "rb"))
 res = {"no_knit": {}, "knitted": {}}
 for seed, run in nk.items():
-    res["no_knit"][seed] = [variants(c) for c in run["counts"]]
+    res["no_knit"][seed] = [variants(c, r.final_physical(r.circuit_for(fn, s, e, r.MASS), t))
+                            for c, (s, e), t in zip(run["counts"], [(0, 0.0)] + r.KNIT_RUNS, r.direct_transpiler_seeds(seed))]
 # knitted line_exact: t=0 direct per replica, then the eight knitted runs (combined signed counts)
 for seed in r.KNIT_SEEDS:
     np.random.seed(seed); np.random.seed(np.random.randint(1024 ** 2))
-    res0 = r.run_direct(fn, r.circuit_for(fn, 0, 0.0, r.MASS), r.NOISY_SHOTS,
-                        simulator_seed=np.random.randint(1024 ** 2), transpiler_seed=np.random.randint(1024 ** 2))
+    sim0, trans0 = np.random.randint(1024 ** 2), np.random.randint(1024 ** 2)
+    res0 = r.run_direct(fn, r.circuit_for(fn, 0, 0.0, r.MASS), r.NOISY_SHOTS, simulator_seed=sim0, transpiler_seed=trans0)
+    physical0 = r.final_physical(r.circuit_for(fn, 0, 0.0, r.MASS), trans0)
+    # knitted combined counts come from many terms, all with this final order (see below)
+    physical_k = KNIT_FINAL
     series = [res0] + [pickle.load(open(r.knit_path(s, e, seed), "rb")) for s, e in r.KNIT_RUNS]
-    res["knitted"][seed] = [variants(c) for c in series]
+    res["knitted"][seed] = [variants(c, physical0 if i == 0 else physical_k) for i, c in enumerate(series)]
     full = [r.DATA / "noisy_knitted_trotter_evol_line_exact_readout" / r.knit_path(s, e, seed).name for s, e in r.KNIT_RUNS]
     if all(f.exists() for f in full):
         # t=0 is a direct run: final-bit inversion only, same as "readout"
-        v0 = apply(to_vec(res0), Ainv)
+        v0 = apply(to_vec(res0), Ainv, physical0)
         full_series = [v0] + [to_vec(pickle.load(open(f, "rb"))) for f in full]
         for i, v in enumerate(full_series):
             res["knitted"][seed][i]["readout_full"] = observable(v, False)

@@ -221,6 +221,40 @@ def run_direct(fn, circuit, num_shots, simulator_seed, transpiler_seed):
     return {key: result[key] for key in sorted(result)}
 
 
+def final_physical(circuit, transpiler_seed):
+    """Physical qubit read into each clbit of a run_direct circuit on the line.
+    Routing leaves the qubits permuted, so readout matrices must be taken from
+    this list, not from line_layout().  Transpiled once, then kept in a file."""
+    import hashlib, json
+    from qiskit.transpiler import generate_preset_pass_manager
+    from qiskit_ibm_runtime.fake_provider import FakeWashingtonV2
+    path = Path(__file__).resolve().parents[1] / "data" / "final_qubits.json"
+    known = json.load(open(path)) if path.exists() else {}
+    key = hashlib.sha256(pickle.dumps((circuit, transpiler_seed), protocol=pickle.HIGHEST_PROTOCOL)).hexdigest()
+    if key not in known:
+        pass_manager = generate_preset_pass_manager(optimization_level=3, backend=FakeWashingtonV2(),
+                                                    seed_transpiler=transpiler_seed, initial_layout=line_layout())
+        transpiled = pass_manager.run(circuit)
+        order = {}
+        for inst in transpiled.data:
+            if inst.operation.name == "measure":
+                order[transpiled.find_bit(inst.clbits[0]).index] = transpiled.find_bit(inst.qubits[0]).index
+        known[key] = [order[c] for c in range(len(order))]
+        tmp = path.with_suffix(".tmp"); json.dump(known, open(tmp, "w")); tmp.replace(path)
+    return known[key]
+
+
+def direct_transpiler_seeds(seed, slots=9):
+    """Transpiler seed of each time slot of an un-knitted replica (stage_noisy's seed chain)."""
+    seeds, my_seed = [], seed
+    for _ in range(slots):
+        np.random.seed(my_seed)
+        my_seed = np.random.randint(1024 ** 2)
+        np.random.randint(1024 ** 2)
+        seeds.append(np.random.randint(1024 ** 2))
+    return seeds
+
+
 def circuit_for(fn, steps, epsilon, mass):
     circuit = fn["trotter_stepper"](steps, N_SITES, epsilon, mass, MID).decompose().decompose()
     circuit.measure_all()
